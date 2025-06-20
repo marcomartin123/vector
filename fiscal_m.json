@@ -1,0 +1,78 @@
+{
+    "configuracao_utilizada": {
+        "tipo_pessoa": "M",
+        "arquivo_entrada_txt": "notas_extraidas_m.txt",
+        "arquivo_saida_json": "fiscal_m.json",
+        "arquivo_saida_csv": "extrato_fifo_detalhado_m.csv",
+        "prejuizo_anterior_informado": -50000.0
+    },
+    "sumario_executivo": {
+        "total_operacoes_carregadas": 118,
+        "total_ativos_carteira": 5,
+        "meses_com_atividade": 1
+    },
+    "posicao_atual_carteira": [
+        {
+            "TICKER": "PETRS312",
+            "QTD ATUAL": "0",
+            "PM COMPRA": "0,77",
+            "PM VENDA": "0,16",
+            "TOTAL INVEST": "25.208,59",
+            "TOTAL RECEB": "5.207,33",
+            "P&L REAL": "-20.001,26",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "PETRG312",
+            "QTD ATUAL": "0",
+            "PM COMPRA": "3,78",
+            "PM VENDA": "1,36",
+            "TOTAL INVEST": "83.233,83",
+            "TOTAL RECEB": "29.965,61",
+            "P&L REAL": "-53.268,22",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "PETROBRAS PN",
+            "QTD ATUAL": "25,400",
+            "PM COMPRA": "29,91",
+            "PM VENDA": "32,99",
+            "TOTAL INVEST": "825.565,74",
+            "TOTAL RECEB": "72.578,81",
+            "P&L REAL": "7.425,84",
+            "CUSTO BASE": "760.412,77"
+        },
+        {
+            "TICKER": "PETRS342",
+            "QTD ATUAL": "29,100",
+            "PM COMPRA": "0,75",
+            "PM VENDA": "",
+            "TOTAL INVEST": "21.767,06",
+            "TOTAL RECEB": "0,00",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": "21.767,06"
+        },
+        {
+            "TICKER": "PETRG342",
+            "QTD ATUAL": "-21,500",
+            "PM COMPRA": "",
+            "PM VENDA": "1,37",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "29.471,01",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        }
+    ],
+    "resultado_mensal_com_compensacao_fiscal": [
+        {
+            "MÊS": "06/2025",
+            "COMPRAS": "955.775,22",
+            "VENDAS": "137.222,76",
+            "P&L REALIZADO": "-65.843,64",
+            "POS FECHADAS": 58,
+            "SALDO FISCAL": "-115.843,64",
+            "IMPOSTO DEVIDO": "0,00",
+            "STATUS FISCAL": "PREJUÍZO ACUMULADO"
+        }
+    ]
+}

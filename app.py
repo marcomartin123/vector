@@ -11,6 +11,9 @@ from datetime import datetime
 import time
 import json
 import os
+import subprocess # Added for sync scripts
+import threading  # Added for sync scripts
+import sys        # Added for sys.executable in sync scripts
 
 CSV_FILE_PATH = 'base.csv'
 APP_TITLE = "Vector Profit Strategy"
@@ -19,8 +22,8 @@ SETTINGS_FILE = "app_settings.json"
 # Arquivos de posição base. 'T' é uma visão combinada, não um arquivo.
 POSITION_FILES = {'M': 'position_m.json', 'R': 'position_r.json'}
 # --- INÍCIO DA MODIFICAÇÃO 1: Adicionar caminhos dos arquivos fiscais ---
-FISCAL_M_FILE = os.path.join('notasm', 'fiscal_m.json')
-FISCAL_R_FILE = os.path.join('notasr', 'fiscal_r.json')
+FISCAL_M_FILE = 'fiscal_m.json' # Updated path
+FISCAL_R_FILE = 'fiscal_r.json' # Updated path
 # --- FIM DA MODIFICAÇÃO 1 ---
 TARGET_FONT = ('Consolas', 9)
 TARGET_FONT_BOLD = ('Consolas', 9)
@@ -193,7 +196,9 @@ class OptionStrategyApp:
         mt5_disconnect()
         self.root.quit()
         self.root.destroy()
-        import sys; sys.exit(0)
+        import sys as sys_on_close # Avoid conflict with global sys
+        sys_on_close.exit(0)
+
 
     def _read_single_position_file(self, file_key):
         filename = POSITION_FILES.get(file_key)
@@ -545,12 +550,13 @@ class OptionStrategyApp:
         t_btn = ttk.Button(centered_frame, text="T", width=4, command=lambda: self.load_position_view('T'))
         t_btn.pack(side=tk.LEFT)
         
-        # --- INÍCIO DA MODIFICAÇÃO 2: Adicionar botões Fiscais M e R ---
         fiscal_m_btn = ttk.Button(centered_frame, text="Fiscal M", command=lambda: self.show_fiscal_report_popup(FISCAL_M_FILE, "Relatório Fiscal M"))
         fiscal_m_btn.pack(side=tk.LEFT, padx=(5,0))
         fiscal_r_btn = ttk.Button(centered_frame, text="Fiscal R", command=lambda: self.show_fiscal_report_popup(FISCAL_R_FILE, "Relatório Fiscal R"))
         fiscal_r_btn.pack(side=tk.LEFT, padx=(2,0))
-        # --- FIM DA MODIFICAÇÃO 2 ---
+
+        self.sync_btn = ttk.Button(centered_frame, text="Sync", command=self.run_sync_scripts)
+        self.sync_btn.pack(side=tk.LEFT, padx=(5,0))
         
         advanced_goal_seek_frame = ttk.Frame(position_action_frame)
         advanced_goal_seek_frame.pack(fill=tk.X, expand=True, padx=5)
@@ -1199,21 +1205,65 @@ class OptionStrategyApp:
         except tk.TclError:
             messagebox.showerror("Erro", "Não foi possível acessar a área de transferência.")
 
+    def run_sync_scripts_threaded(self):
+        # Disable button during sync
+        if hasattr(self, 'sync_btn'):
+            self.sync_btn.config(state=tk.DISABLED, text="Sincronizando...")
+
+        try:
+            # Run notas.py
+            messagebox.showinfo("Sincronização", "Iniciando execução de notas.py...", parent=self.root) # parent=self.root for proper modal behavior
+            process_notas = subprocess.run([sys.executable, 'notas.py'], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace')
+
+            if process_notas.returncode == 0:
+                messagebox.showinfo("Sincronização", "notas.py executado com sucesso!", parent=self.root)
+                # Run relat.py
+                messagebox.showinfo("Sincronização", "Iniciando execução de relat.py...", parent=self.root)
+                process_relat = subprocess.run([sys.executable, 'relat.py'], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace')
+
+                if process_relat.returncode == 0:
+                    messagebox.showinfo("Sincronização", "relat.py executado com sucesso! Sincronização completa.", parent=self.root)
+                    # Optionally, refresh data in the app after sync
+                    # self.load_position_view(self.current_position_key) # Example: Re-load current view
+                else:
+                    error_message = f"Erro ao executar relat.py:\nReturn Code: {process_relat.returncode}\nOutput:\n{process_relat.stdout}\nError:\n{process_relat.stderr}"
+                    print(error_message) # Log to console as well
+                    messagebox.showerror("Erro de Sincronização", error_message, parent=self.root)
+            else:
+                error_message = f"Erro ao executar notas.py:\nReturn Code: {process_notas.returncode}\nOutput:\n{process_notas.stdout}\nError:\n{process_notas.stderr}"
+                print(error_message) # Log to console as well
+                messagebox.showerror("Erro de Sincronização", error_message, parent=self.root)
+
+        except FileNotFoundError as e:
+            messagebox.showerror("Erro de Sincronização", f"Script não encontrado: {e}. Certifique-se que notas.py e relat.py estão no diretório raiz.", parent=self.root)
+        except Exception as e:
+            messagebox.showerror("Erro de Sincronização", f"Ocorreu um erro inesperado: {e}", parent=self.root)
+        finally:
+            # Re-enable button
+            if hasattr(self, 'sync_btn') and self.sync_btn.winfo_exists(): # Check if widget still exists
+                 self.sync_btn.config(state=tk.NORMAL, text="Sync")
+
+    def run_sync_scripts(self):
+        # Run the script processing in a separate thread to keep UI responsive
+        thread = threading.Thread(target=self.run_sync_scripts_threaded)
+        thread.daemon = True  # Allows main program to exit even if thread is running
+        thread.start()
+
     # --- INÍCIO DA MODIFICAÇÃO 3: Lógica genérica para Popup Fiscal ---
     def show_fiscal_report_popup(self, file_path, title):
         """Abre um popup para exibir dados fiscais de um arquivo JSON."""
         if not os.path.exists(file_path):
-            messagebox.showerror("Arquivo não encontrado", f"O arquivo fiscal '{file_path}' não foi encontrado.\nVerifique se o caminho está correto.")
+            messagebox.showerror("Arquivo não encontrado", f"O arquivo fiscal '{file_path}' não foi encontrado.\nVerifique se o caminho está correto.", parent=self.root)
             return
 
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         except json.JSONDecodeError:
-            messagebox.showerror("Erro de Leitura", f"O arquivo '{file_path}' não é um JSON válido.")
+            messagebox.showerror("Erro de Leitura", f"O arquivo '{file_path}' não é um JSON válido.", parent=self.root)
             return
         except Exception as e:
-            messagebox.showerror("Erro", f"Ocorreu um erro ao ler o arquivo: {e}")
+            messagebox.showerror("Erro", f"Ocorreu um erro ao ler o arquivo: {e}", parent=self.root)
             return
 
         popup = tk.Toplevel(self.root)
