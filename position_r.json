@@ -1,0 +1,15 @@
+{
+    "tickers": {
+        "asset": "PETR4",
+        "call": "PETRG342",
+        "put": "PETRS342"
+    },
+    "expiracao": "17/07/2025",
+    "asset_q": 39300,
+    "asset_p": 32.95,
+    "call_q": 32500,
+    "call_p": 1.37,
+    "put_q": 46200,
+    "put_p": 0.8,
+    "strike": 32.73
+}

@@ -1,0 +1,66 @@
+{
+    "posicao_atual_carteira": [
+        {
+            "TICKER": "PETRS312",
+            "QTD ATUAL": "0",
+            "PM COMPRA": "0.77",
+            "PM VENDA": "0.16",
+            "TOTAL INVEST": "25,209",
+            "TOTAL RECEB": "5,207",
+            "P&L REAL": "-20,001",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "PETRG312",
+            "QTD ATUAL": "0",
+            "PM COMPRA": "3.78",
+            "PM VENDA": "1.36",
+            "TOTAL INVEST": "83,234",
+            "TOTAL RECEB": "29,966",
+            "P&L REAL": "-53,268",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "PETROBRAS PN",
+            "QTD ATUAL": "25,400",
+            "PM COMPRA": "29.91",
+            "PM VENDA": "32.99",
+            "TOTAL INVEST": "825,566",
+            "TOTAL RECEB": "72,579",
+            "P&L REAL": "7,426",
+            "CUSTO BASE": "760,413"
+        },
+        {
+            "TICKER": "PETRS342",
+            "QTD ATUAL": "29,100",
+            "PM COMPRA": "0.75",
+            "PM VENDA": "",
+            "TOTAL INVEST": "21,767",
+            "TOTAL RECEB": "0",
+            "P&L REAL": "0",
+            "CUSTO BASE": "21,767"
+        },
+        {
+            "TICKER": "PETRG342",
+            "QTD ATUAL": "-21,500",
+            "PM COMPRA": "",
+            "PM VENDA": "1.37",
+            "TOTAL INVEST": "0",
+            "TOTAL RECEB": "29,471",
+            "P&L REAL": "0",
+            "CUSTO BASE": ""
+        }
+    ],
+    "resultado_mensal_com_compensacao_fiscal": [
+        {
+            "MÊS": "06/2025",
+            "COMPRAS": "955,775",
+            "VENDAS": "137,223",
+            "P&L REALIZADO": "-65.843,64",
+            "POS FECHADAS": 58,
+            "SALDO FISCAL": "-115.843,64",
+            "IMPOSTO DEVIDO": "0,00",
+            "STATUS FISCAL": "PREJUÍZO ACUMULADO"
+        }
+    ]
+}
