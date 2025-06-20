@@ -36,7 +36,7 @@ try:
     TABULATE_AVAILABLE = True
 except ImportError:
     TABULATE_AVAILABLE = False
-    print("⚠️  Biblioteca 'tabulate' não encontrada. Instale com: pip install tabulate")
+    print("Warning:  Biblioteca 'tabulate' não encontrada. Instale com: pip install tabulate")
     print("   Usando formatação simples...")
 
 def convert_brazilian_number(value_str, is_integer=False):
@@ -97,7 +97,7 @@ def parse_trading_data(file_content):
                             'month': date[3:10]  # MM/YYYY format
                         })
                     except (ValueError, IndexError) as e:
-                        print(f"⚠️  Erro ao processar linha: {line}")
+                        print(f"Warning:  Erro ao processar linha: {line}")
                         print(f"   Erro: {e}")
                         continue
     
@@ -110,7 +110,7 @@ def generate_fifo_extract(operations):
     grouped_ops = group_by_asset(operations)
     fifo_extract = []
     
-    print("📋 Processando ativos para extrato FIFO...")
+    print("Info: Processando ativos para extrato FIFO...")
     
     for asset, ops in grouped_ops.items():
         print(f"   Processando {asset}: {len(ops)} operações")
@@ -255,7 +255,7 @@ def generate_fifo_extract(operations):
                         'Retorno_Percent': ''
                     })
     
-    print(f"✅ Extrato FIFO gerado com {len(fifo_extract)} registros")
+    print(f"OK: Extrato FIFO gerado com {len(fifo_extract)} registros")
     return fifo_extract
 
 def save_fifo_extract_to_csv(fifo_extract, filename='extrato_fifo_detalhado.csv'):
@@ -263,7 +263,7 @@ def save_fifo_extract_to_csv(fifo_extract, filename='extrato_fifo_detalhado.csv'
     Save FIFO extract to CSV file with Brazilian formatting
     """
     if not fifo_extract:
-        print("⚠️  Nenhum dado para exportar.")
+        print("Warning:  Nenhum dado para exportar.")
         return
     
     # Define headers in Portuguese
@@ -289,7 +289,7 @@ def save_fifo_extract_to_csv(fifo_extract, filename='extrato_fifo_detalhado.csv'
         import os
         current_dir = os.getcwd()
         full_path = os.path.join(current_dir, filename)
-        print(f"💾 Tentando salvar em: {full_path}")
+        print(f"Saving: Tentando salvar em: {full_path}")
         
         with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=headers, delimiter=';')
@@ -301,26 +301,26 @@ def save_fifo_extract_to_csv(fifo_extract, filename='extrato_fifo_detalhado.csv'
         # Verify file was created
         if os.path.exists(filename):
             file_size = os.path.getsize(filename)
-            print(f"✅ Extrato FIFO detalhado salvo em: {filename}")
-            print(f"📊 Total de registros: {len(fifo_extract)}")
+            print(f"OK: Extrato FIFO detalhado salvo em: {filename}")
+            print(f"Summary: Total de registros: {len(fifo_extract)}")
             print(f"📁 Tamanho do arquivo: {file_size} bytes")
         else:
-            print(f"❌ Arquivo não foi criado: {filename}")
+            print(f"Error: Arquivo não foi criado: {filename}")
             return
         
         # Show summary
         fechamentos = [row for row in fifo_extract if 'FECHAMENTO' in row['Tipo_Operacao']]
         aberturas = [row for row in fifo_extract if 'ABERTURA' in row['Tipo_Operacao']]
         
-        print(f"📈 Operações de abertura: {len(aberturas)}")
+        print(f"Result: Operações de abertura: {len(aberturas)}")
         print(f"📉 Operações de fechamento: {len(fechamentos)}")
         
         if fechamentos:
             total_pnl = sum(float(row['PL_Realizado'].replace(',', '.')) for row in fechamentos if row['PL_Realizado'] != '0,00')
-            print(f"💰 P&L Total Realizado: {total_pnl:,.2f}")
+            print(f"P&L: P&L Total Realizado: {total_pnl:,.2f}")
             
     except Exception as e:
-        print(f"❌ Erro ao salvar arquivo CSV: {e}")
+        print(f"Error: Erro ao salvar arquivo CSV: {e}")
         import traceback
         traceback.print_exc()
 
@@ -477,7 +477,7 @@ def calculate_tax_compensation(monthly_pnl, prejuizo_acumulado_anterior_param):
     compensation_balance = prejuizo_acumulado_anterior_param
     monthly_compensation = {}
     
-    print(f"   💼 Iniciando com prejuízo anterior: {format_currency(prejuizo_acumulado_anterior_param)}")
+    print(f"   Note: Iniciando com prejuízo anterior: {format_currency(prejuizo_acumulado_anterior_param)}")
     
     for month in sorted_months:
         monthly_data = monthly_pnl[month]
@@ -679,7 +679,7 @@ def main():
         print(f"\n{'='*30} Iniciando processamento para: {person_type} {'='*30}")
         
         if not os.path.exists(input_txt_file): # Check if input file exists
-            print(f"❌ Erro: Arquivo de entrada '{input_txt_file}' não encontrado!")
+            print(f"Error: Erro: Arquivo de entrada '{input_txt_file}' não encontrado!")
             print("   Por favor, crie o arquivo ou certifique-se de que 'notas.py' foi executado.")
             overall_success = False
             continue # Skip to next configuration
@@ -687,38 +687,38 @@ def main():
         try:
             with open(input_txt_file, 'r', encoding='utf-8') as file:
                 file_content = file.read()
-            print(f"✅ Arquivo de entrada '{input_txt_file}' lido com sucesso.")
+            print(f"OK: Arquivo de entrada '{input_txt_file}' lido com sucesso.")
         except Exception as e:
-            print(f"❌ Erro ao ler o arquivo '{input_txt_file}': {e}")
+            print(f"Error: Erro ao ler o arquivo '{input_txt_file}': {e}")
             overall_success = False
             continue
 
         operations = parse_trading_data(file_content)
         if not operations:
-            print(f"⚠️ Nenhuma operação encontrada no arquivo '{input_txt_file}'. Pulando para a próxima configuração se houver.")
+            print(f"Warning: Nenhuma operação encontrada no arquivo '{input_txt_file}'. Pulando para a próxima configuração se houver.")
             # Not necessarily a failure for overall_success if file is just empty.
             # If it's critical that operations exist, then set overall_success = False
             continue
-        print(f"✅ {len(operations)} operações carregadas do arquivo '{input_txt_file}'.")
+        print(f"OK: {len(operations)} operações carregadas do arquivo '{input_txt_file}'.")
 
         portfolio = calculate_portfolio_position(operations)
         monthly_pnl = calculate_monthly_pnl(operations)
         
-        print(f"🧮 Calculando compensação fiscal para {person_type} com prejuízo anterior de {prejuizo_anterior_config:.2f}...")
+        print(f"Calculating: Calculando compensação fiscal para {person_type} com prejuízo anterior de {prejuizo_anterior_config:.2f}...")
         tax_compensation = calculate_tax_compensation(monthly_pnl, prejuizo_anterior_config)
-        # print(f"📋 Compensação fiscal calculada para {len(tax_compensation)} meses para {person_type}") # Verbose
+        # print(f"Info: Compensação fiscal calculada para {len(tax_compensation)} meses para {person_type}") # Verbose
 
         # Debug: Show tax compensation details (optional)
         # for month, data in tax_compensation.items():
         #     print(f"   {month}: P&L={data['monthly_result']:.2f}, Saldo={data['new_balance']:.2f}, Status={data['status']}")
 
-        print(f"🔄 Gerando extrato FIFO detalhado para {person_type}...")
+        print(f"Generating: Gerando extrato FIFO detalhado para {person_type}...")
         try:
             fifo_extract = generate_fifo_extract(operations)
-            # print(f"📋 Extrato FIFO gerado com {len(fifo_extract)} registros para {person_type}") # Verbose
+            # print(f"Info: Extrato FIFO gerado com {len(fifo_extract)} registros para {person_type}") # Verbose
             save_fifo_extract_to_csv(fifo_extract, filename=output_csv_file) # Pass the specific filename
         except Exception as e:
-            print(f"❌ Erro ao gerar ou salvar extrato FIFO para {person_type}: {e}")
+            print(f"Error: Erro ao gerar ou salvar extrato FIFO para {person_type}: {e}")
             import traceback
             traceback.print_exc()
             overall_success = False
@@ -739,10 +739,10 @@ def main():
             })
 
         if TABULATE_AVAILABLE and portfolio_json_data:
-            print("\n📊 POSIÇÃO ATUAL DA CARTEIRA:")
+            print("\nSummary: POSIÇÃO ATUAL DA CARTEIRA:")
             print(tabulate([list(row.values()) for row in portfolio_json_data], headers=list(portfolio_json_data[0].keys()), tablefmt='grid', stralign='center', numalign='right'))
         elif portfolio_json_data:
-            print("\n📊 POSIÇÃO ATUAL DA CARTEIRA (formato simples):")
+            print("\nSummary: POSIÇÃO ATUAL DA CARTEIRA (formato simples):")
             for row in portfolio_json_data: print(row)
 
 
@@ -761,10 +761,10 @@ def main():
             })
 
         if TABULATE_AVAILABLE and monthly_json_data:
-            print("\n📈 RESULTADO POR MÊS COM COMPENSAÇÃO FISCAL:")
+            print("\nResult: RESULTADO POR MÊS COM COMPENSAÇÃO FISCAL:")
             print(tabulate([list(row.values()) for row in monthly_json_data], headers=list(monthly_json_data[0].keys()), tablefmt='grid', stralign='center', numalign='right'))
         elif monthly_json_data:
-            print("\n📈 RESULTADO POR MÊS COM COMPENSAÇÃO FISCAL (formato simples):")
+            print("\nResult: RESULTADO POR MÊS COM COMPENSAÇÃO FISCAL (formato simples):")
             for row in monthly_json_data: print(row)
 
         # JSON output structure
@@ -787,15 +787,15 @@ def main():
         try:
             with open(output_json_file, 'w', encoding='utf-8') as json_file:
                 json.dump(json_output_data, json_file, ensure_ascii=False, indent=4)
-            print(f"\n✅ Relatório fiscal para {person_type} salvo em '{output_json_file}'")
+            print(f"\nOK: Relatório fiscal para {person_type} salvo em '{output_json_file}'")
         except Exception as e:
-            print(f"\n❌ Erro ao salvar o arquivo JSON '{output_json_file}': {e}")
+            print(f"\nError: Erro ao salvar o arquivo JSON '{output_json_file}': {e}")
             overall_success = False
 
     if overall_success:
-        print("\n\n🎉 Processamento de todos os relatórios concluído com sucesso! 🎉")
+        print("\n\nSuccess: Processamento de todos os relatórios concluído com sucesso! Success:")
     else:
-        print("\n\n⚠️ Processamento concluído com um ou mais erros. Verifique os logs. ⚠️")
+        print("\n\nWarning: Processamento concluído com um ou mais erros. Verifique os logs. Warning:")
 
 if __name__ == "__main__":
     main()
