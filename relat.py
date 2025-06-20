@@ -729,13 +729,13 @@ def main():
         portfolio_json_data = []
         for asset, data in portfolio.items():
             portfolio_json_data.append({
-                'TICKER': asset, 'QTD ATUAL': f"{data['current_quantity']:,}",
-                'PM COMPRA': format_currency(data['avg_buy_price']) if data['avg_buy_price'] > 0 else "",
-                'PM VENDA': format_currency(data['avg_sell_price']) if data['avg_sell_price'] > 0 else "",
-                'TOTAL INVEST': format_currency(data['total_invested']),
-                'TOTAL RECEB': format_currency(data['total_received']),
-                'P&L REAL': format_currency(data['realized_pnl']),
-                'CUSTO BASE': format_currency(data['cost_basis']) if data['current_quantity'] > 0 else ""
+                'Ticker': asset, 'Qtd': f"{data['current_quantity']:,}",
+                'PM C': format_currency(data['avg_buy_price']) if data['avg_buy_price'] > 0 else "",
+                'PM V': format_currency(data['avg_sell_price']) if data['avg_sell_price'] > 0 else "",
+                'T Invest': format_currency(data['total_invested']),
+                'T Receb': format_currency(data['total_received']),
+                'P/L': format_currency(data['realized_pnl']),
+                'Custo': format_currency(data['cost_basis']) if data['current_quantity'] > 0 else ""
             })
 
         if TABULATE_AVAILABLE and portfolio_json_data:
@@ -751,13 +751,13 @@ def main():
             data = monthly_pnl[month_key]
             tax_data = tax_compensation.get(month_key, {})
             monthly_json_data.append({
-                'MÊS': month_key, 'COMPRAS': format_currency(data['total_bought']),
-                'VENDAS': format_currency(data['total_sold']),
-                'P&L REALIZADO': format_currency(data['realized_pnl']),
-                'POS FECHADAS': data['closed_positions'],
-                'SALDO FISCAL': format_currency(tax_data.get('new_balance', 0)),
-                'IMPOSTO DEVIDO': format_currency(tax_data.get('tax_due', 0)),
-                'STATUS FISCAL': tax_data.get('status', '')
+                'Mês': month_key, 'COMPRAS': format_currency(data['total_bought']),
+                'Vendas': format_currency(data['total_sold']),
+                'P/L': format_currency(data['realized_pnl']),
+                'Posição F': data['closed_positions'],
+                'Saldo Fiscal': format_currency(tax_data.get('new_balance', 0)),
+                'Imposto': format_currency(tax_data.get('tax_due', 0)),
+                'St Fiscal': tax_data.get('status', '')
             })
 
         if TABULATE_AVAILABLE and monthly_json_data:

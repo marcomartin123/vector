@@ -13,66 +13,66 @@
     },
     "posicao_atual_carteira": [
         {
-            "TICKER": "PETRS312",
-            "QTD ATUAL": "0",
-            "PM COMPRA": "0,77",
-            "PM VENDA": "0,16",
-            "TOTAL INVEST": "25.208,59",
-            "TOTAL RECEB": "5.207,33",
-            "P&L REAL": "-20.001,26",
-            "CUSTO BASE": ""
+            "Ticker": "PETRS312",
+            "Qtd": "0",
+            "PM C": "0,77",
+            "PM V": "0,16",
+            "T Invest": "25.208,59",
+            "T Receb": "5.207,33",
+            "P/L": "-20.001,26",
+            "Custo": ""
         },
         {
-            "TICKER": "PETRG312",
-            "QTD ATUAL": "0",
-            "PM COMPRA": "3,78",
-            "PM VENDA": "1,36",
-            "TOTAL INVEST": "83.233,83",
-            "TOTAL RECEB": "29.965,61",
-            "P&L REAL": "-53.268,22",
-            "CUSTO BASE": ""
+            "Ticker": "PETRG312",
+            "Qtd": "0",
+            "PM C": "3,78",
+            "PM V": "1,36",
+            "T Invest": "83.233,83",
+            "T Receb": "29.965,61",
+            "P/L": "-53.268,22",
+            "Custo": ""
         },
         {
-            "TICKER": "PETROBRAS PN",
-            "QTD ATUAL": "25,400",
-            "PM COMPRA": "29,91",
-            "PM VENDA": "32,99",
-            "TOTAL INVEST": "825.565,74",
-            "TOTAL RECEB": "72.578,81",
-            "P&L REAL": "7.425,84",
-            "CUSTO BASE": "760.412,77"
+            "Ticker": "PETROBRAS PN",
+            "Qtd": "25,400",
+            "PM C": "29,91",
+            "PM V": "32,99",
+            "T Invest": "825.565,74",
+            "T Receb": "72.578,81",
+            "P/L": "7.425,84",
+            "Custo": "760.412,77"
         },
         {
-            "TICKER": "PETRS342",
-            "QTD ATUAL": "29,100",
-            "PM COMPRA": "0,75",
-            "PM VENDA": "",
-            "TOTAL INVEST": "21.767,06",
-            "TOTAL RECEB": "0,00",
-            "P&L REAL": "0,00",
-            "CUSTO BASE": "21.767,06"
+            "Ticker": "PETRS342",
+            "Qtd": "29,100",
+            "PM C": "0,75",
+            "PM V": "",
+            "T Invest": "21.767,06",
+            "T Receb": "0,00",
+            "P/L": "0,00",
+            "Custo": "21.767,06"
         },
         {
-            "TICKER": "PETRG342",
-            "QTD ATUAL": "-21,500",
-            "PM COMPRA": "",
-            "PM VENDA": "1,37",
-            "TOTAL INVEST": "0,00",
-            "TOTAL RECEB": "29.471,01",
-            "P&L REAL": "0,00",
-            "CUSTO BASE": ""
+            "Ticker": "PETRG342",
+            "Qtd": "-21,500",
+            "PM C": "",
+            "PM V": "1,37",
+            "T Invest": "0,00",
+            "T Receb": "29.471,01",
+            "P/L": "0,00",
+            "Custo": ""
         }
     ],
     "resultado_mensal_com_compensacao_fiscal": [
         {
-            "MÊS": "06/2025",
+            "Mês": "06/2025",
             "COMPRAS": "955.775,22",
-            "VENDAS": "137.222,76",
-            "P&L REALIZADO": "-65.843,64",
-            "POS FECHADAS": 58,
-            "SALDO FISCAL": "-115.843,64",
-            "IMPOSTO DEVIDO": "0,00",
-            "STATUS FISCAL": "PREJUÍZO ACUMULADO"
+            "Vendas": "137.222,76",
+            "P/L": "-65.843,64",
+            "Posição F": 58,
+            "Saldo Fiscal": "-115.843,64",
+            "Imposto": "0,00",
+            "St Fiscal": "PREJUÍZO ACUMULADO"
         }
     ]
 }
