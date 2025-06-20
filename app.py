@@ -1321,15 +1321,15 @@ class OptionStrategyApp:
         for col in cols:
             tree.heading(col, text=col)
             # Tenta adivinhar se a coluna é numérica para alinhar à direita
-            first_val_str = str(data_list[0].get(col, "")).strip().replace("R$ ", "")
-            is_numeric_like = first_val_str.startswith(('-', '+')) or first_val_str.replace('.', '', 1).replace(',', '').isdigit()
-            anchor = tk.E if is_numeric_like else tk.W
+            # first_val_str = str(data_list[0].get(col, "")).strip().replace("R$ ", "") # Removed for anchor change
+            # is_numeric_like = first_val_str.startswith(('-', '+')) or first_val_str.replace('.', '', 1).replace(',', '').isdigit() # Removed for anchor change
+            anchor = tk.W # Changed anchor to tk.W for all columns
             
-            # Auto-ajuste de largura da coluna
-            header_width = tkfont.Font(font=TARGET_FONT_BOLD).measure(col)
-            max_data_width = max(tkfont.Font(font=TARGET_FONT).measure(str(item.get(col, ""))) for item in data_list) if data_list else 0
-            col_width = max(header_width, max_data_width) + 25 # Padding extra
-            tree.column(col, width=col_width, anchor=anchor, stretch=tk.NO)
+            # Auto-ajuste de largura da coluna - REMOVED
+            # header_width = tkfont.Font(font=TARGET_FONT_BOLD).measure(col) # REMOVED
+            # max_data_width = max(tkfont.Font(font=TARGET_FONT).measure(str(item.get(col, ""))) for item in data_list) if data_list else 0 # REMOVED
+            # col_width = max(header_width, max_data_width) + 25 # Padding extra # REMOVED
+            tree.column(col, width=100, anchor=anchor, stretch=tk.YES) # Added width=100, kept anchor and stretch
 
         for i, item in enumerate(data_list):
             tag = 'evenrow' if i % 2 == 0 else 'oddrow'
