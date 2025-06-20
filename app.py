@@ -14,6 +14,7 @@ import os
 import subprocess # Added for sync scripts
 import threading  # Added for sync scripts
 import sys        # Added for sys.executable in sync scripts
+import zipfile
 
 CSV_FILE_PATH = 'base.csv'
 APP_TITLE = "Vector Profit Strategy"
@@ -557,6 +558,9 @@ class OptionStrategyApp:
 
         self.sync_btn = ttk.Button(centered_frame, text="Sy",width=5, command=self.run_sync_scripts)
         self.sync_btn.pack(side=tk.LEFT, padx=(5,0))
+
+        self.si_btn = ttk.Button(centered_frame, text="SI", width=5, command=self.run_si_extraction)
+        self.si_btn.pack(side=tk.LEFT, padx=(2,0))
         
         advanced_goal_seek_frame = ttk.Frame(position_action_frame)
         advanced_goal_seek_frame.pack(fill=tk.X, expand=True, padx=5)
@@ -1276,6 +1280,89 @@ class OptionStrategyApp:
         thread.daemon = True
         thread.start()
 
+    def run_si_extraction(self):
+        # Placeholder for SIProgressPopup instantiation
+        self.si_progress_popup = SIProgressPopup(self.root) # This will be defined in the next plan step
+
+        thread = threading.Thread(target=self.run_si_extraction_threaded, args=(self.si_progress_popup,))
+        thread.daemon = True
+        thread.start()
+
+    def run_si_extraction_threaded(self, progress_popup_instance):
+        # Disable button during operation
+        if hasattr(self, 'si_btn'):
+            self.root.after_idle(lambda: self.si_btn.config(state=tk.DISABLED, text="SI..."))
+
+        zip_filename = "SI_D_SEDE.zip"
+        extract_folder = "SI_D_SEDE"
+        file_to_extract = "SI_D_SEDE.txt"
+        full_file_path = os.path.join(extract_folder, file_to_extract)
+
+        try:
+            self.root.after_idle(progress_popup_instance.update_progress, "Iniciando...", 0)
+
+            # Ensure extraction folder exists
+            if not os.path.exists(extract_folder):
+                os.makedirs(extract_folder)
+                self.root.after_idle(progress_popup_instance.update_progress, f"Pasta {extract_folder} criada.", 20)
+            else:
+                self.root.after_idle(progress_popup_instance.update_progress, f"Pasta {extract_folder} existente.", 20)
+
+            if not os.path.exists(zip_filename):
+                error_message = f"Arquivo {zip_filename} não encontrado."
+                self.root.after_idle(progress_popup_instance.update_progress, "Erro de Arquivo!", 0)
+                parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
+                self.root.after_idle(messagebox.showerror, "Erro de Arquivo", error_message, parent=parent_window)
+                self.root.after_idle(progress_popup_instance.show_close_button)
+                return
+
+            self.root.after_idle(progress_popup_instance.update_progress, f"Descompactando {file_to_extract}...", 40)
+            
+            with zipfile.ZipFile(zip_filename, 'r') as zip_ref:
+                # Extract specific file, overwriting if it exists
+                # To ensure overwrite, we extract to a temporary name and then replace,
+                # or rely on ZipFile.extract's behavior if it overwrites by default (needs check)
+                # For robust overwrite, it's often better to remove the old file first if it exists.
+                if os.path.exists(full_file_path):
+                    os.remove(full_file_path)
+                
+                # Check if the specific file is in the zip archive
+                if file_to_extract not in zip_ref.namelist():
+                    error_message = f"Arquivo {file_to_extract} não encontrado dentro de {zip_filename}."
+                    self.root.after_idle(progress_popup_instance.update_progress, "Erro no ZIP!", 0)
+                    parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
+                    self.root.after_idle(messagebox.showerror, "Erro no ZIP", error_message, parent=parent_window)
+                    self.root.after_idle(progress_popup_instance.show_close_button)
+                    return
+
+                zip_ref.extract(file_to_extract, extract_folder)
+            
+            self.root.after_idle(progress_popup_instance.update_progress, "Concluído!", 100)
+            self.root.after_idle(progress_popup_instance.show_close_button)
+
+        except FileNotFoundError: # Handles zip_filename not found if initial check somehow missed it
+            self.root.after_idle(progress_popup_instance.update_progress, "Erro de Arquivo!", 0)
+            error_message = f"Arquivo ZIP '{zip_filename}' não encontrado."
+            parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
+            self.root.after_idle(messagebox.showerror, "Erro de Arquivo", error_message, parent=parent_window)
+            self.root.after_idle(progress_popup_instance.show_close_button)
+        except zipfile.BadZipFile:
+            self.root.after_idle(progress_popup_instance.update_progress, "Erro de ZIP!", 0)
+            error_message = f"Arquivo '{zip_filename}' não é um arquivo ZIP válido ou está corrompido."
+            parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
+            self.root.after_idle(messagebox.showerror, "Erro de ZIP", error_message, parent=parent_window)
+            self.root.after_idle(progress_popup_instance.show_close_button)
+        except Exception as e:
+            self.root.after_idle(progress_popup_instance.update_progress, "Erro Inesperado!", 0)
+            error_msg_exc = f"Ocorreu um erro inesperado: {e}"
+            parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
+            self.root.after_idle(messagebox.showerror, "Erro Inesperado", error_msg_exc, parent=parent_window)
+            self.root.after_idle(progress_popup_instance.show_close_button)
+        finally:
+            # Re-enable button
+            if hasattr(self, 'si_btn') and self.si_btn.winfo_exists():
+                self.root.after_idle(lambda: self.si_btn.config(state=tk.NORMAL, text="SI"))
+
     # --- INÍCIO DA MODIFICAÇÃO 3: Lógica genérica para Popup Fiscal ---
     def show_fiscal_report_popup(self, file_path, title):
         """Abre um popup para exibir dados fiscais de um arquivo JSON."""
@@ -1439,6 +1526,74 @@ class SyncProgressPopup:
         self.popup.grab_release() # Release grab before destroying
         self.popup.destroy()
 
+class SIProgressPopup:
+    def __init__(self, master):
+        self.master = master
+        self.popup = tk.Toplevel(master)
+        self.popup.title("Processando SI...")
+        self.popup.transient(master)
+        self.popup.grab_set()
+        self.popup.geometry("300x120") # Adjusted height for one task
+        # Prevent closing via window manager until explicitly allowed
+        self.popup.protocol("WM_DELETE_WINDOW", lambda: None)
+
+        pad_options = {'padx': 10, 'pady': 5}
+
+        # SI Extraction Task
+        ttk.Label(self.popup, text="SI_D_SEDE.zip:").grid(row=0, column=0, sticky=tk.W, **pad_options)
+        self.si_progress = ttk.Progressbar(self.popup, orient=tk.HORIZONTAL, length=150, mode='indeterminate')
+        self.si_progress.grid(row=0, column=1, **pad_options)
+        self.si_status_label = ttk.Label(self.popup, text="Aguardando...")
+        self.si_status_label.grid(row=0, column=2, sticky=tk.W, **pad_options)
+
+        # Center the popup
+        self.popup.update_idletasks()
+        x = master.winfo_x() + (master.winfo_width() / 2) - (self.popup.winfo_width() / 2)
+        y = master.winfo_y() + (master.winfo_height() / 2) - (self.popup.winfo_height() / 2)
+        self.popup.geometry(f"+{int(x)}+{int(y)}")
+        
+        self.si_progress.start()
+
+    def update_progress(self, status, progress_value=None):
+        # Ensure UI updates happen in the main thread if called from a thread
+        # However, the current implementation in run_si_extraction_threaded already uses root.after_idle
+        # so direct calls here should be fine.
+        
+        self.si_status_label.config(text=status)
+
+        if progress_value is None:
+            self.si_progress.config(mode='indeterminate')
+            self.si_progress.start()
+        else:
+            self.si_progress.stop() # Stop indeterminate mode if it was running
+            self.si_progress.config(mode='determinate', value=progress_value)
+            if progress_value == 100: # If complete, ensure it shows 100%
+                self.si_progress['value'] = 100
+            elif progress_value == 0 and status.startswith("Erro"): # If error, show 0%
+                self.si_progress['value'] = 0
+
+
+    def show_close_button(self):
+        # Ensure UI updates happen in the main thread
+        # self.master.after_idle(self._create_close_button) # If issues arise, use after_idle
+        self._create_close_button()
+
+
+    def _create_close_button(self):
+        # Enable closing via window manager
+        if self.popup.winfo_exists():
+            self.popup.protocol("WM_DELETE_WINDOW", self.close)
+        
+            # Add a close button
+            # Check if button already exists to prevent duplicates if called multiple times
+            if not hasattr(self, 'close_button') or not self.close_button.winfo_exists():
+                self.close_button = ttk.Button(self.popup, text="Fechar", command=self.close)
+                self.close_button.grid(row=1, column=0, columnspan=3, pady=10)
+
+    def close(self):
+        if self.popup.winfo_exists():
+            self.popup.grab_release()
+            self.popup.destroy()
 
 if __name__ == "__main__":
     root = tk.Tk()
