@@ -1297,65 +1297,81 @@ class OptionStrategyApp:
         extract_folder = "SI_D_SEDE"
         file_to_extract = "SI_D_SEDE.txt"
         full_file_path = os.path.join(extract_folder, file_to_extract)
+        
+        # Define parent_window for messagebox dialogs
+        parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
 
         try:
-            self.root.after_idle(progress_popup_instance.update_progress, "Iniciando...", 0)
+            self.root.after_idle(progress_popup_instance.update_progress, "si", "Iniciando...", 0)
 
             # Ensure extraction folder exists
             if not os.path.exists(extract_folder):
                 os.makedirs(extract_folder)
-                self.root.after_idle(progress_popup_instance.update_progress, f"Pasta {extract_folder} criada.", 20)
+                self.root.after_idle(progress_popup_instance.update_progress, "si", f"Pasta {extract_folder} criada.", 20)
             else:
-                self.root.after_idle(progress_popup_instance.update_progress, f"Pasta {extract_folder} existente.", 20)
+                self.root.after_idle(progress_popup_instance.update_progress, "si", f"Pasta {extract_folder} existente.", 20)
 
             if not os.path.exists(zip_filename):
                 error_message = f"Arquivo {zip_filename} não encontrado."
-                self.root.after_idle(progress_popup_instance.update_progress, "Erro de Arquivo!", 0)
-                parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
+                self.root.after_idle(progress_popup_instance.update_progress, "si", "Erro de Arquivo!", 0)
                 self.root.after_idle(messagebox.showerror, "Erro de Arquivo", error_message, parent=parent_window)
                 self.root.after_idle(progress_popup_instance.show_close_button)
                 return
 
-            self.root.after_idle(progress_popup_instance.update_progress, f"Descompactando {file_to_extract}...", 40)
+            self.root.after_idle(progress_popup_instance.update_progress, "si", f"Descompactando {file_to_extract}...", 40)
             
             with zipfile.ZipFile(zip_filename, 'r') as zip_ref:
-                # Extract specific file, overwriting if it exists
-                # To ensure overwrite, we extract to a temporary name and then replace,
-                # or rely on ZipFile.extract's behavior if it overwrites by default (needs check)
-                # For robust overwrite, it's often better to remove the old file first if it exists.
                 if os.path.exists(full_file_path):
                     os.remove(full_file_path)
-                
-                # Check if the specific file is in the zip archive
                 if file_to_extract not in zip_ref.namelist():
                     error_message = f"Arquivo {file_to_extract} não encontrado dentro de {zip_filename}."
-                    self.root.after_idle(progress_popup_instance.update_progress, "Erro no ZIP!", 0)
-                    parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
+                    self.root.after_idle(progress_popup_instance.update_progress, "si", "Erro no ZIP!", 0)
                     self.root.after_idle(messagebox.showerror, "Erro no ZIP", error_message, parent=parent_window)
                     self.root.after_idle(progress_popup_instance.show_close_button)
                     return
-
                 zip_ref.extract(file_to_extract, extract_folder)
             
-            self.root.after_idle(progress_popup_instance.update_progress, "Concluído!", 100)
-            self.root.after_idle(progress_popup_instance.show_close_button)
+            self.root.after_idle(progress_popup_instance.update_progress, "si", "Concluído!", 100)
+            
+            # Start sync process
+            self.root.after_idle(progress_popup_instance.update_progress, "sync", "Executando...")
+            try:
+                process_sync = subprocess.run([sys.executable, 'sync.py'], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace')
+                if process_sync.returncode == 0:
+                    self.root.after_idle(progress_popup_instance.update_progress, "sync", "Concluído!", 100)
+                else:
+                    self.root.after_idle(progress_popup_instance.update_progress, "sync", "Erro!", 0)
+                    error_message_sync = f"Erro ao executar sync.py:\nReturn Code: {process_sync.returncode}\nOutput:\n{process_sync.stdout}\nError:\n{process_sync.stderr}"
+                    self.root.after_idle(messagebox.showerror, "Erro em sync.py", error_message_sync, parent=parent_window)
+            except FileNotFoundError:
+                self.root.after_idle(progress_popup_instance.update_progress, "sync", "Erro de Arquivo!", 0)
+                error_message_fnf_sync = "Script não encontrado: sync.py. Certifique-se que sync.py está no diretório raiz."
+                self.root.after_idle(messagebox.showerror, "Erro de Arquivo", error_message_fnf_sync, parent=parent_window)
+            except Exception as e_sync:
+                self.root.after_idle(progress_popup_instance.update_progress, "sync", "Erro Inesperado!", 0)
+                error_message_exc_sync = f"Ocorreu um erro inesperado ao executar sync.py: {e_sync}"
+                self.root.after_idle(messagebox.showerror, "Erro Inesperado", error_message_exc_sync, parent=parent_window)
+            finally:
+                self.root.after_idle(progress_popup_instance.show_close_button)
+
 
         except FileNotFoundError: # Handles zip_filename not found if initial check somehow missed it
-            self.root.after_idle(progress_popup_instance.update_progress, "Erro de Arquivo!", 0)
+            self.root.after_idle(progress_popup_instance.update_progress, "si", "Erro de Arquivo!", 0)
+            # Also mark sync as not run or errored if SI part fails early
+            self.root.after_idle(progress_popup_instance.update_progress, "sync", "Não executado", 0)
             error_message = f"Arquivo ZIP '{zip_filename}' não encontrado."
-            parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
             self.root.after_idle(messagebox.showerror, "Erro de Arquivo", error_message, parent=parent_window)
             self.root.after_idle(progress_popup_instance.show_close_button)
         except zipfile.BadZipFile:
-            self.root.after_idle(progress_popup_instance.update_progress, "Erro de ZIP!", 0)
+            self.root.after_idle(progress_popup_instance.update_progress, "si", "Erro de ZIP!", 0)
+            self.root.after_idle(progress_popup_instance.update_progress, "sync", "Não executado", 0)
             error_message = f"Arquivo '{zip_filename}' não é um arquivo ZIP válido ou está corrompido."
-            parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
             self.root.after_idle(messagebox.showerror, "Erro de ZIP", error_message, parent=parent_window)
             self.root.after_idle(progress_popup_instance.show_close_button)
         except Exception as e:
-            self.root.after_idle(progress_popup_instance.update_progress, "Erro Inesperado!", 0)
-            error_msg_exc = f"Ocorreu um erro inesperado: {e}"
-            parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
+            self.root.after_idle(progress_popup_instance.update_progress, "si", "Erro Inesperado!", 0)
+            self.root.after_idle(progress_popup_instance.update_progress, "sync", "Não executado", 0)
+            error_msg_exc = f"Ocorreu um erro inesperado na extração SI: {e}"
             self.root.after_idle(messagebox.showerror, "Erro Inesperado", error_msg_exc, parent=parent_window)
             self.root.after_idle(progress_popup_instance.show_close_button)
         finally:
@@ -1533,7 +1549,7 @@ class SIProgressPopup:
         self.popup.title("Processando SI...")
         self.popup.transient(master)
         self.popup.grab_set()
-        self.popup.geometry("300x120") # Adjusted height for one task
+        self.popup.geometry("300x180") # Adjusted height for two tasks
         # Prevent closing via window manager until explicitly allowed
         self.popup.protocol("WM_DELETE_WINDOW", lambda: None)
 
@@ -1546,6 +1562,13 @@ class SIProgressPopup:
         self.si_status_label = ttk.Label(self.popup, text="Aguardando...")
         self.si_status_label.grid(row=0, column=2, sticky=tk.W, **pad_options)
 
+        # Sync Task
+        ttk.Label(self.popup, text="Sincronização:").grid(row=1, column=0, sticky=tk.W, **pad_options)
+        self.sync_progress = ttk.Progressbar(self.popup, orient=tk.HORIZONTAL, length=150, mode='indeterminate')
+        self.sync_progress.grid(row=1, column=1, **pad_options)
+        self.sync_status_label = ttk.Label(self.popup, text="Aguardando...")
+        self.sync_status_label.grid(row=1, column=2, sticky=tk.W, **pad_options)
+
         # Center the popup
         self.popup.update_idletasks()
         x = master.winfo_x() + (master.winfo_width() / 2) - (self.popup.winfo_width() / 2)
@@ -1553,24 +1576,54 @@ class SIProgressPopup:
         self.popup.geometry(f"+{int(x)}+{int(y)}")
         
         self.si_progress.start()
+        self.sync_progress.start() # Start the new progress bar
 
-    def update_progress(self, status, progress_value=None):
+    def update_progress(self, script_name, status, progress_value=None):
         # Ensure UI updates happen in the main thread if called from a thread
-        # However, the current implementation in run_si_extraction_threaded already uses root.after_idle
-        # so direct calls here should be fine.
         
-        self.si_status_label.config(text=status)
+        progress_bar = None
+        status_label = None
 
-        if progress_value is None:
-            self.si_progress.config(mode='indeterminate')
-            self.si_progress.start()
+        if script_name == "sync":
+            progress_bar = self.sync_progress
+            status_label = self.sync_status_label
+        elif script_name == "si": 
+            progress_bar = self.si_progress
+            status_label = self.si_status_label
         else:
-            self.si_progress.stop() # Stop indeterminate mode if it was running
-            self.si_progress.config(mode='determinate', value=progress_value)
-            if progress_value == 100: # If complete, ensure it shows 100%
-                self.si_progress['value'] = 100
-            elif progress_value == 0 and status.startswith("Erro"): # If error, show 0%
-                self.si_progress['value'] = 0
+            # Fallback for old calls that might pass status as first argument
+            if hasattr(self, 'si_progress') and hasattr(self, 'si_status_label'):
+                # Treat the first argument as status, second as progress_value for legacy call
+                legacy_status = script_name 
+                legacy_progress_value = status 
+                
+                self.si_status_label.config(text=legacy_status)
+                if legacy_progress_value is None:
+                    self.si_progress.config(mode='indeterminate')
+                    self.si_progress.start()
+                else:
+                    self.si_progress.stop()
+                    self.si_progress.config(mode='determinate', value=legacy_progress_value)
+                    if legacy_progress_value == 100:
+                        self.si_progress['value'] = 100
+                    elif legacy_progress_value == 0 and legacy_status.startswith("Erro"):
+                        self.si_progress['value'] = 0
+                return # Handled legacy call
+            else: # Should not happen
+                return
+
+        if status_label and progress_bar:
+            status_label.config(text=status)
+            if progress_value is None:
+                progress_bar.config(mode='indeterminate')
+                progress_bar.start()
+            else:
+                progress_bar.stop() 
+                progress_bar.config(mode='determinate', value=progress_value)
+                if progress_value == 100: 
+                    progress_bar['value'] = 100
+                elif progress_value == 0 and status.startswith("Erro"): 
+                    progress_bar['value'] = 0
 
 
     def show_close_button(self):
@@ -1588,7 +1641,7 @@ class SIProgressPopup:
             # Check if button already exists to prevent duplicates if called multiple times
             if not hasattr(self, 'close_button') or not self.close_button.winfo_exists():
                 self.close_button = ttk.Button(self.popup, text="Fechar", command=self.close)
-                self.close_button.grid(row=1, column=0, columnspan=3, pady=10)
+                self.close_button.grid(row=2, column=0, columnspan=3, pady=10) # Adjusted row
 
     def close(self):
         if self.popup.winfo_exists():
