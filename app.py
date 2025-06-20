@@ -550,12 +550,12 @@ class OptionStrategyApp:
         t_btn = ttk.Button(centered_frame, text="T", width=4, command=lambda: self.load_position_view('T'))
         t_btn.pack(side=tk.LEFT)
         
-        fiscal_m_btn = ttk.Button(centered_frame, text="Fs M", command=lambda: self.show_fiscal_report_popup(FISCAL_M_FILE, "Relatório Fiscal M"))
+        fiscal_m_btn = ttk.Button(centered_frame, text="Fs M",width=5, command=lambda: self.show_fiscal_report_popup(FISCAL_M_FILE, "Relatório Fiscal M"))
         fiscal_m_btn.pack(side=tk.LEFT, padx=(5,0))
-        fiscal_r_btn = ttk.Button(centered_frame, text="Fs R", command=lambda: self.show_fiscal_report_popup(FISCAL_R_FILE, "Relatório Fiscal R"))
+        fiscal_r_btn = ttk.Button(centered_frame, text="Fs R",width=5, command=lambda: self.show_fiscal_report_popup(FISCAL_R_FILE, "Relatório Fiscal R"))
         fiscal_r_btn.pack(side=tk.LEFT, padx=(2,0))
 
-        self.sync_btn = ttk.Button(centered_frame, text="Sy", command=self.run_sync_scripts)
+        self.sync_btn = ttk.Button(centered_frame, text="Sy",width=5, command=self.run_sync_scripts)
         self.sync_btn.pack(side=tk.LEFT, padx=(5,0))
         
         advanced_goal_seek_frame = ttk.Frame(position_action_frame)
