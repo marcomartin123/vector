@@ -1,71 +1,79 @@
-import requests
+# down.py
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+from datetime import datetime
 import os
+import sys
 import time
-from pathlib import Path
 
-def download_b3_series_robusta(url, max_retries=3, save_dir="."):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Referer': 'https://www.b3.com.br/',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
-    }
-    
-    # Criar diretório
-    Path(save_dir).mkdir(exist_ok=True)
-    
-    for attempt in range(max_retries):
-        try:
-            print(f"Tentativa {attempt + 1} de {max_retries}")
-            
-            response = requests.get(url, headers=headers, stream=True, timeout=30)
-            response.raise_for_status()
-            
-            # Verificar se realmente recebeu um arquivo
-            content_type = response.headers.get('Content-Type', '')
-            if 'text/html' in content_type:
-                print("Recebeu HTML em vez do arquivo. Tentando novamente...")
-                time.sleep(2)
-                continue
-            
-            # Nome do arquivo
-            timestamp = time.strftime("%Y%m%d_%H%M%S")
-            filename = f"series_autorizadas_b3_{timestamp}.txt"
-            
-            content_disposition = response.headers.get('Content-Disposition')
-            if content_disposition and 'filename=' in content_disposition:
-                filename = content_disposition.split('filename=')[1].strip('"\'')
-            
-            filepath = Path(save_dir) / filename
-            
-            # Baixar
-            with open(filepath, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            
-            # Verificar se o arquivo não está vazio
-            if filepath.stat().st_size == 0:
-                print("Arquivo baixado está vazio. Tentando novamente...")
-                filepath.unlink()  # Deletar arquivo vazio
-                time.sleep(2)
-                continue
-            
-            print(f"Download bem-sucedido: {filepath}")
-            print(f"Tamanho: {filepath.stat().st_size} bytes")
-            return str(filepath)
-            
-        except requests.exceptions.RequestException as e:
-            print(f"Erro na tentativa {attempt + 1}: {e}")
-            if attempt < max_retries - 1:
-                time.sleep(5)  # Aguardar antes de tentar novamente
-            else:
-                print("Todas as tentativas falharam")
-                return None
+def download_series_autorizadas():
+    """
+    Realiza o download do arquivo "Séries Autorizadas" do site da B3 usando Playwright.
 
-# Executar
-url = "https://www.b3.com.br/lumis/portal/file/fileDownload.jsp?fileId=8AE490CA9781882C01978D56DCAE286D"
-arquivo_baixado = download_b3_series_robusta(url)
+    Esta abordagem controla um navegador real para contornar proteções complexas
+    (como Cloudflare) que podem bloquear requisições diretas.
 
-if arquivo_baixado:
-    print(f"Arquivo salvo em: {arquivo_baixado}")
-else:
-    print("Falha no download")
+    O processo é:
+    1. Navegar até a página de Séries Autorizadas.
+    2. Encontrar o link de texto "Lista Completa de Séries Autorizadas".
+    3. Clicar no link e capturar o download resultante.
+
+    Retorna:
+        bool: True se o download for bem-sucedido, False caso contrário.
+    """
+    print("--- Iniciando download do arquivo de Séries Autorizadas da B3 (usando Playwright) ---")
+
+    FILENAME = "SI_D_SEDE.zip"
+    URL_PAGE = "https://www.b3.com.br/pt_br/market-data-e-indices/servicos-de-dados/market-data/consultas/mercado-a-vista/opcoes/series-autorizadas/"
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+            )
+            page = context.new_page()
+
+            print(f"1. Navegando para a página: {URL_PAGE}")
+            page.goto(URL_PAGE, timeout=9000000)
+
+            # --- MUDANÇA PRINCIPAL AQUI ---
+            # Em vez de procurar por um seletor de href, procuramos pelo texto exato do link.
+            # Esta é a forma mais confiável de encontrar o elemento.
+            download_link_selector = page.get_by_text("Lista Completa de Séries Autorizadas", exact=True)
+            
+            print("2. Aguardando o link de download ficar disponível...")
+            download_link_selector.wait_for(state="visible", timeout=6000000)
+            
+            print("3. Iniciando a captura do download e clicando no link...")
+            
+            with page.expect_download(timeout=6000000) as download_info:
+                download_link_selector.click()
+            
+            download = download_info.value
+            
+            if os.path.exists(FILENAME):
+                os.remove(FILENAME)
+                print(f"   Arquivo antigo '{FILENAME}' removido.")
+
+            download.save_as(FILENAME)
+            
+            print(f"\n[SUCESSO] Download concluído! Arquivo salvo como '{FILENAME}'")
+            
+            browser.close()
+            return True
+
+    except PlaywrightTimeoutError:
+        print("\n[ERRO] Timeout: A página ou o link de download demorou demais para carregar.")
+        print("   Isso pode ser devido a uma conexão lenta ou a uma mudança no site da B3.")
+        return False
+    except Exception as e:
+        print(f"\n[ERRO] Ocorreu um erro inesperado com o Playwright: {e}")
+        return False
+
+if __name__ == "__main__":
+    print("Executando o script de download de forma autônoma para teste...")
+    success = download_series_autorizadas()
+    if success:
+        print("\nTeste finalizado com sucesso.")
+    else:
+        print("\nTeste finalizado com erros.")
