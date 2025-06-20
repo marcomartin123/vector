@@ -1210,41 +1210,38 @@ class OptionStrategyApp:
             messagebox.showerror("Erro", "Não foi possível acessar a área de transferência.")
 
     def run_sync_scripts_threaded(self, progress_popup_instance):
-        # Disable button during sync (use after_idle for UI changes from thread)
         if hasattr(self, 'sync_btn'):
             self.root.after_idle(lambda: self.sync_btn.config(state=tk.DISABLED, text="Sincronizando..."))
 
         try:
-            # Update UI for notas.py start
             self.root.after_idle(progress_popup_instance.update_progress, "notas", "Executando...")
             
-            process_notas = subprocess.run([sys.executable, 'notas.py'], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace')
+            child_env = os.environ.copy()
+            child_env["PYTHONIOENCODING"] = "utf-8"
+            
+            process_notas = subprocess.run([sys.executable, 'notas.py'], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace', env=child_env)
 
             if process_notas.returncode == 0:
                 self.root.after_idle(progress_popup_instance.update_progress, "notas", "Concluído!", 100)
-
-                # Update UI for relat.py start
                 self.root.after_idle(progress_popup_instance.update_progress, "relat", "Executando...")
-                process_relat = subprocess.run([sys.executable, 'relat.py'], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace')
+                
+                process_relat = subprocess.run([sys.executable, 'relat.py'], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace', env=child_env)
 
                 if process_relat.returncode == 0:
                     self.root.after_idle(progress_popup_instance.update_progress, "relat", "Concluído!", 100)
                     self.root.after_idle(progress_popup_instance.show_close_button)
-                    # Optionally, refresh data in the app after sync
-                    # self.root.after_idle(self.load_position_view, self.current_position_key) # Example
                 else:
                     self.root.after_idle(progress_popup_instance.update_progress, "relat", "Erro!", 0)
                     error_message = f"Erro ao executar relat.py:\nReturn Code: {process_relat.returncode}\nOutput:\n{process_relat.stdout}\nError:\n{process_relat.stderr}"
-                    print(error_message) # Log to console as well
+                    print(error_message)
                     parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
                     self.root.after_idle(messagebox.showerror, "Erro em relat.py", error_message, parent=parent_window)
                     self.root.after_idle(progress_popup_instance.show_close_button)
             else:
                 self.root.after_idle(progress_popup_instance.update_progress, "notas", "Erro!", 0)
-                # Also set relat.py to "Não executado" or similar if notas.py fails
                 self.root.after_idle(progress_popup_instance.update_progress, "relat", "Não executado", 0)
                 error_message = f"Erro ao executar notas.py:\nReturn Code: {process_notas.returncode}\nOutput:\n{process_notas.stdout}\nError:\n{process_notas.stderr}"
-                print(error_message) # Log to console as well
+                print(error_message)
                 parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
                 self.root.after_idle(messagebox.showerror, "Erro em notas.py", error_message, parent=parent_window)
                 self.root.after_idle(progress_popup_instance.show_close_button)
@@ -1266,30 +1263,22 @@ class OptionStrategyApp:
             self.root.after_idle(messagebox.showerror, "Erro Inesperado", error_msg_exc, parent=parent_window)
             self.root.after_idle(progress_popup_instance.show_close_button)
         finally:
-            # Re-enable button (use after_idle)
             if hasattr(self, 'sync_btn') and self.sync_btn.winfo_exists():
                  self.root.after_idle(lambda: self.sync_btn.config(state=tk.NORMAL, text="Sy"))
 
     def run_sync_scripts(self):
-        # Create the popup in the main thread
         self.progress_popup = SyncProgressPopup(self.root) 
-
-        # Run the script processing in a separate thread
-        # Pass the popup instance to the threaded function
         thread = threading.Thread(target=self.run_sync_scripts_threaded, args=(self.progress_popup,))
         thread.daemon = True
         thread.start()
 
     def run_si_extraction(self):
-        # Placeholder for SIProgressPopup instantiation
-        self.si_progress_popup = SIProgressPopup(self.root) # This will be defined in the next plan step
-
+        self.si_progress_popup = SIProgressPopup(self.root)
         thread = threading.Thread(target=self.run_si_extraction_threaded, args=(self.si_progress_popup,))
         thread.daemon = True
         thread.start()
 
     def run_si_extraction_threaded(self, progress_popup_instance):
-        # Disable button during operation
         if hasattr(self, 'si_btn'):
             self.root.after_idle(lambda: self.si_btn.config(state=tk.DISABLED, text="SI..."))
 
@@ -1298,13 +1287,29 @@ class OptionStrategyApp:
         file_to_extract = "SI_D_SEDE.txt"
         full_file_path = os.path.join(extract_folder, file_to_extract)
         
-        # Define parent_window for messagebox dialogs
         parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
+        
+        child_env = os.environ.copy()
+        child_env["PYTHONIOENCODING"] = "utf-8"
 
         try:
-            self.root.after_idle(progress_popup_instance.update_progress, "si", "Iniciando...", 0)
+            # --- ETAPA 1: EXECUTAR down.py ---
+            self.root.after_idle(progress_popup_instance.update_progress, "download", "Executando...")
+            process_down = subprocess.run([sys.executable, 'down.py'], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace', env=child_env)
 
-            # Ensure extraction folder exists
+            if process_down.returncode == 0:
+                self.root.after_idle(progress_popup_instance.update_progress, "download", "Concluído!", 100)
+            else:
+                self.root.after_idle(progress_popup_instance.update_progress, "download", "Erro!", 0)
+                self.root.after_idle(progress_popup_instance.update_progress, "si", "Não executado", 0)
+                self.root.after_idle(progress_popup_instance.update_progress, "sync", "Não executado", 0)
+                error_message = f"Erro ao executar down.py:\nReturn Code: {process_down.returncode}\nOutput:\n{process_down.stdout}\nError:\n{process_down.stderr}"
+                self.root.after_idle(lambda: messagebox.showerror("Erro em down.py", error_message, parent=parent_window))
+                self.root.after_idle(progress_popup_instance.show_close_button)
+                return # Aborta o resto do processo
+
+            # --- ETAPA 2: DESCOMPACTAR (se download OK) ---
+            self.root.after_idle(progress_popup_instance.update_progress, "si", "Iniciando...", 0)
             if not os.path.exists(extract_folder):
                 os.makedirs(extract_folder)
                 self.root.after_idle(progress_popup_instance.update_progress, "si", f"Pasta {extract_folder} criada.", 20)
@@ -1312,7 +1317,7 @@ class OptionStrategyApp:
                 self.root.after_idle(progress_popup_instance.update_progress, "si", f"Pasta {extract_folder} existente.", 20)
 
             if not os.path.exists(zip_filename):
-                error_message = f"Arquivo {zip_filename} não encontrado."
+                error_message = f"Arquivo {zip_filename} não encontrado. O download pode ter falhado."
                 self.root.after_idle(progress_popup_instance.update_progress, "si", "Erro de Arquivo!", 0)
                 self.root.after_idle(messagebox.showerror, "Erro de Arquivo", error_message, parent=parent_window)
                 self.root.after_idle(progress_popup_instance.show_close_button)
@@ -1333,33 +1338,22 @@ class OptionStrategyApp:
             
             self.root.after_idle(progress_popup_instance.update_progress, "si", "Concluído!", 100)
             
-            # Start sync process
+            # --- ETAPA 3: SINCRONIZAR (se descompactação OK) ---
             self.root.after_idle(progress_popup_instance.update_progress, "sync", "Executando...")
-            try:
-                process_sync = subprocess.run([sys.executable, 'sync.py'], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace')
-                if process_sync.returncode == 0:
-                    self.root.after_idle(progress_popup_instance.update_progress, "sync", "Concluído!", 100)
-                else:
-                    self.root.after_idle(progress_popup_instance.update_progress, "sync", "Erro!", 0)
-                    error_message_sync = f"Erro ao executar sync.py:\nReturn Code: {process_sync.returncode}\nOutput:\n{process_sync.stdout}\nError:\n{process_sync.stderr}"
-                    self.root.after_idle(messagebox.showerror, "Erro em sync.py", error_message_sync, parent=parent_window)
-            except FileNotFoundError:
-                self.root.after_idle(progress_popup_instance.update_progress, "sync", "Erro de Arquivo!", 0)
-                error_message_fnf_sync = "Script não encontrado: sync.py. Certifique-se que sync.py está no diretório raiz."
-                self.root.after_idle(messagebox.showerror, "Erro de Arquivo", error_message_fnf_sync, parent=parent_window)
-            except Exception as e_sync:
-                self.root.after_idle(progress_popup_instance.update_progress, "sync", "Erro Inesperado!", 0)
-                error_message_exc_sync = f"Ocorreu um erro inesperado ao executar sync.py: {e_sync}"
-                self.root.after_idle(messagebox.showerror, "Erro Inesperado", error_message_exc_sync, parent=parent_window)
-            finally:
-                self.root.after_idle(progress_popup_instance.show_close_button)
+            process_sync = subprocess.run([sys.executable, 'sync.py'], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace', env=child_env)
+            if process_sync.returncode == 0:
+                self.root.after_idle(progress_popup_instance.update_progress, "sync", "Concluído!", 100)
+            else:
+                self.root.after_idle(progress_popup_instance.update_progress, "sync", "Erro!", 0)
+                error_message_sync = f"Erro ao executar sync.py:\nReturn Code: {process_sync.returncode}\nOutput:\n{process_sync.stdout}\nError:\n{process_sync.stderr}"
+                self.root.after_idle(lambda: messagebox.showerror("Erro em sync.py", error_message_sync, parent=parent_window))
+            
+            self.root.after_idle(progress_popup_instance.show_close_button)
 
-
-        except FileNotFoundError: # Handles zip_filename not found if initial check somehow missed it
-            self.root.after_idle(progress_popup_instance.update_progress, "si", "Erro de Arquivo!", 0)
-            # Also mark sync as not run or errored if SI part fails early
-            self.root.after_idle(progress_popup_instance.update_progress, "sync", "Não executado", 0)
-            error_message = f"Arquivo ZIP '{zip_filename}' não encontrado."
+        except FileNotFoundError as e:
+            script_name = e.filename
+            self.root.after_idle(progress_popup_instance.update_progress, "download" if script_name == "down.py" else "sync", "Erro de Arquivo!", 0)
+            error_message = f"Script não encontrado: {script_name}. Certifique-se que o arquivo está no diretório raiz."
             self.root.after_idle(messagebox.showerror, "Erro de Arquivo", error_message, parent=parent_window)
             self.root.after_idle(progress_popup_instance.show_close_button)
         except zipfile.BadZipFile:
@@ -1369,13 +1363,13 @@ class OptionStrategyApp:
             self.root.after_idle(messagebox.showerror, "Erro de ZIP", error_message, parent=parent_window)
             self.root.after_idle(progress_popup_instance.show_close_button)
         except Exception as e:
-            self.root.after_idle(progress_popup_instance.update_progress, "si", "Erro Inesperado!", 0)
+            self.root.after_idle(progress_popup_instance.update_progress, "download", "Erro Inesperado!", 0)
+            self.root.after_idle(progress_popup_instance.update_progress, "si", "Não executado", 0)
             self.root.after_idle(progress_popup_instance.update_progress, "sync", "Não executado", 0)
-            error_msg_exc = f"Ocorreu um erro inesperado na extração SI: {e}"
-            self.root.after_idle(messagebox.showerror, "Erro Inesperado", error_msg_exc, parent=parent_window)
+            error_msg_exc = f"Ocorreu um erro inesperado no processo SI: {e}"
+            self.root.after_idle(lambda: messagebox.showerror("Erro Inesperado", error_msg_exc, parent=parent_window))
             self.root.after_idle(progress_popup_instance.show_close_button)
         finally:
-            # Re-enable button
             if hasattr(self, 'si_btn') and self.si_btn.winfo_exists():
                 self.root.after_idle(lambda: self.si_btn.config(state=tk.NORMAL, text="SI"))
 
@@ -1450,16 +1444,8 @@ class OptionStrategyApp:
 
         for col in cols:
             tree.heading(col, text=col)
-            # Tenta adivinhar se a coluna é numérica para alinhar à direita
-            # first_val_str = str(data_list[0].get(col, "")).strip().replace("R$ ", "") # Removed for anchor change
-            # is_numeric_like = first_val_str.startswith(('-', '+')) or first_val_str.replace('.', '', 1).replace(',', '').isdigit() # Removed for anchor change
-            anchor = tk.W # Changed anchor to tk.W for all columns
-            
-            # Auto-ajuste de largura da coluna - REMOVED
-            # header_width = tkfont.Font(font=TARGET_FONT_BOLD).measure(col) # REMOVED
-            # max_data_width = max(tkfont.Font(font=TARGET_FONT).measure(str(item.get(col, ""))) for item in data_list) if data_list else 0 # REMOVED
-            # col_width = max(header_width, max_data_width) + 25 # Padding extra # REMOVED
-            tree.column(col, width=100, anchor=anchor, stretch=tk.YES) # Added width=100, kept anchor and stretch
+            anchor = tk.W
+            tree.column(col, width=100, anchor=anchor, stretch=tk.YES)
 
         for i, item in enumerate(data_list):
             tag = 'evenrow' if i % 2 == 0 else 'oddrow'
@@ -1477,34 +1463,28 @@ class SyncProgressPopup:
         self.popup.transient(master)
         self.popup.grab_set()
         self.popup.geometry("300x150")
-        # Prevent closing via window manager until explicitly allowed
         self.popup.protocol("WM_DELETE_WINDOW", lambda: None)
 
 
-        # UI Elements
         pad_options = {'padx': 10, 'pady': 5}
 
-        # notas.py
         ttk.Label(self.popup, text="notas.py:").grid(row=0, column=0, sticky=tk.W, **pad_options)
         self.notas_progress = ttk.Progressbar(self.popup, orient=tk.HORIZONTAL, length=150, mode='indeterminate')
         self.notas_progress.grid(row=0, column=1, **pad_options)
         self.notas_status_label = ttk.Label(self.popup, text="Aguardando...")
         self.notas_status_label.grid(row=0, column=2, sticky=tk.W, **pad_options)
 
-        # relat.py
         ttk.Label(self.popup, text="relat.py:").grid(row=1, column=0, sticky=tk.W, **pad_options)
         self.relat_progress = ttk.Progressbar(self.popup, orient=tk.HORIZONTAL, length=150, mode='indeterminate')
         self.relat_progress.grid(row=1, column=1, **pad_options)
         self.relat_status_label = ttk.Label(self.popup, text="Aguardando...")
         self.relat_status_label.grid(row=1, column=2, sticky=tk.W, **pad_options)
 
-        # Center the popup
         self.popup.update_idletasks()
         x = master.winfo_x() + (master.winfo_width() / 2) - (self.popup.winfo_width() / 2)
         y = master.winfo_y() + (master.winfo_height() / 2) - (self.popup.winfo_height() / 2)
         self.popup.geometry(f"+{int(x)}+{int(y)}")
         
-        # Start progress bars in indeterminate mode
         self.notas_progress.start()
         self.relat_progress.start()
 
@@ -1516,7 +1496,7 @@ class SyncProgressPopup:
             progress_bar = self.relat_progress
             status_label = self.relat_status_label
         else:
-            return # Unknown script
+            return
 
         status_label.config(text=status)
 
@@ -1524,22 +1504,20 @@ class SyncProgressPopup:
             progress_bar.config(mode='indeterminate')
             progress_bar.start()
         else:
-            progress_bar.stop() # Stop indeterminate mode if it was running
+            progress_bar.stop()
             progress_bar.config(mode='determinate', value=progress_value)
-            if progress_value == 100: # If complete, ensure it shows 100%
+            if progress_value == 100:
                  progress_bar['value'] = 100
 
 
     def show_close_button(self):
-        # Enable closing via window manager
         self.popup.protocol("WM_DELETE_WINDOW", self.close)
         
-        # Add a close button
         self.close_button = ttk.Button(self.popup, text="Fechar", command=self.close)
         self.close_button.grid(row=2, column=0, columnspan=3, pady=10)
 
     def close(self):
-        self.popup.grab_release() # Release grab before destroying
+        self.popup.grab_release()
         self.popup.destroy()
 
 class SIProgressPopup:
@@ -1549,68 +1527,56 @@ class SIProgressPopup:
         self.popup.title("Processando SI...")
         self.popup.transient(master)
         self.popup.grab_set()
-        self.popup.geometry("300x180") # Adjusted height for two tasks
-        # Prevent closing via window manager until explicitly allowed
+        self.popup.geometry("350x210") # Aumentado para 3 tarefas
         self.popup.protocol("WM_DELETE_WINDOW", lambda: None)
 
         pad_options = {'padx': 10, 'pady': 5}
 
-        # SI Extraction Task
-        ttk.Label(self.popup, text="SI_D_SEDE.zip:").grid(row=0, column=0, sticky=tk.W, **pad_options)
+        # --- NOVA TAREFA: Download ---
+        ttk.Label(self.popup, text="Download SI:").grid(row=0, column=0, sticky=tk.W, **pad_options)
+        self.download_progress = ttk.Progressbar(self.popup, orient=tk.HORIZONTAL, length=150, mode='indeterminate')
+        self.download_progress.grid(row=0, column=1, **pad_options)
+        self.download_status_label = ttk.Label(self.popup, text="Aguardando...")
+        self.download_status_label.grid(row=0, column=2, sticky=tk.W, **pad_options)
+
+        # Tarefa de Extração
+        ttk.Label(self.popup, text="Extração ZIP:").grid(row=1, column=0, sticky=tk.W, **pad_options)
         self.si_progress = ttk.Progressbar(self.popup, orient=tk.HORIZONTAL, length=150, mode='indeterminate')
-        self.si_progress.grid(row=0, column=1, **pad_options)
+        self.si_progress.grid(row=1, column=1, **pad_options)
         self.si_status_label = ttk.Label(self.popup, text="Aguardando...")
-        self.si_status_label.grid(row=0, column=2, sticky=tk.W, **pad_options)
+        self.si_status_label.grid(row=1, column=2, sticky=tk.W, **pad_options)
 
-        # Sync Task
-        ttk.Label(self.popup, text="Sincronização:").grid(row=1, column=0, sticky=tk.W, **pad_options)
+        # Tarefa de Sincronização
+        ttk.Label(self.popup, text="Sincronização:").grid(row=2, column=0, sticky=tk.W, **pad_options)
         self.sync_progress = ttk.Progressbar(self.popup, orient=tk.HORIZONTAL, length=150, mode='indeterminate')
-        self.sync_progress.grid(row=1, column=1, **pad_options)
+        self.sync_progress.grid(row=2, column=1, **pad_options)
         self.sync_status_label = ttk.Label(self.popup, text="Aguardando...")
-        self.sync_status_label.grid(row=1, column=2, sticky=tk.W, **pad_options)
+        self.sync_status_label.grid(row=2, column=2, sticky=tk.W, **pad_options)
 
-        # Center the popup
         self.popup.update_idletasks()
         x = master.winfo_x() + (master.winfo_width() / 2) - (self.popup.winfo_width() / 2)
         y = master.winfo_y() + (master.winfo_height() / 2) - (self.popup.winfo_height() / 2)
         self.popup.geometry(f"+{int(x)}+{int(y)}")
         
+        self.download_progress.start()
         self.si_progress.start()
-        self.sync_progress.start() # Start the new progress bar
+        self.sync_progress.start()
 
-    def update_progress(self, script_name, status, progress_value=None):
-        # Ensure UI updates happen in the main thread if called from a thread
-        
+    def update_progress(self, task_name, status, progress_value=None):
         progress_bar = None
         status_label = None
 
-        if script_name == "sync":
-            progress_bar = self.sync_progress
-            status_label = self.sync_status_label
-        elif script_name == "si": 
+        if task_name == "download":
+            progress_bar = self.download_progress
+            status_label = self.download_status_label
+        elif task_name == "si": 
             progress_bar = self.si_progress
             status_label = self.si_status_label
+        elif task_name == "sync":
+            progress_bar = self.sync_progress
+            status_label = self.sync_status_label
         else:
-            # Fallback for old calls that might pass status as first argument
-            if hasattr(self, 'si_progress') and hasattr(self, 'si_status_label'):
-                # Treat the first argument as status, second as progress_value for legacy call
-                legacy_status = script_name 
-                legacy_progress_value = status 
-                
-                self.si_status_label.config(text=legacy_status)
-                if legacy_progress_value is None:
-                    self.si_progress.config(mode='indeterminate')
-                    self.si_progress.start()
-                else:
-                    self.si_progress.stop()
-                    self.si_progress.config(mode='determinate', value=legacy_progress_value)
-                    if legacy_progress_value == 100:
-                        self.si_progress['value'] = 100
-                    elif legacy_progress_value == 0 and legacy_status.startswith("Erro"):
-                        self.si_progress['value'] = 0
-                return # Handled legacy call
-            else: # Should not happen
-                return
+            return
 
         if status_label and progress_bar:
             status_label.config(text=status)
@@ -1625,23 +1591,15 @@ class SIProgressPopup:
                 elif progress_value == 0 and status.startswith("Erro"): 
                     progress_bar['value'] = 0
 
-
     def show_close_button(self):
-        # Ensure UI updates happen in the main thread
-        # self.master.after_idle(self._create_close_button) # If issues arise, use after_idle
         self._create_close_button()
 
-
     def _create_close_button(self):
-        # Enable closing via window manager
         if self.popup.winfo_exists():
             self.popup.protocol("WM_DELETE_WINDOW", self.close)
-        
-            # Add a close button
-            # Check if button already exists to prevent duplicates if called multiple times
             if not hasattr(self, 'close_button') or not self.close_button.winfo_exists():
                 self.close_button = ttk.Button(self.popup, text="Fechar", command=self.close)
-                self.close_button.grid(row=2, column=0, columnspan=3, pady=10) # Adjusted row
+                self.close_button.grid(row=3, column=0, columnspan=3, pady=10) # Row ajustada
 
     def close(self):
         if self.popup.winfo_exists():
