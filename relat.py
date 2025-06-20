@@ -4,14 +4,32 @@ from collections import defaultdict
 import re
 import csv
 import json  # Adicionado para salvar o resultado em JSON
+import os # Added for os.path.exists
 
 # ======================================
 # CONFIGURAÇÃO FISCAL
 # ======================================
 # Prejuízo acumulado trazido de anos/meses anteriores
 # Altere este valor para incluir prejuízos fiscais anteriores
-PREJUIZO_ACUMULADO_ANTERIOR = -50000.00  # Exemplo: -50.000,00 de prejuízo anterior
+# PREJUIZO_ACUMULADO_ANTERIOR = -50000.00 # Exemplo: -50.000,00 de prejuízo anterior # Now part of CONFIGURATIONS
 # ======================================
+
+CONFIGURATIONS = [
+    {
+        'person_type': 'M',
+        'input_txt_file': 'notas_extraidas_m.txt',
+        'output_json_file': 'fiscal_m.json',
+        'output_csv_file': 'extrato_fifo_detalhado_m.csv',
+        'prejuizo_anterior': -50000.00
+    },
+    {
+        'person_type': 'R',
+        'input_txt_file': 'notas_extraidas_r.txt',
+        'output_json_file': 'fiscal_r.json',
+        'output_csv_file': 'extrato_fifo_detalhado_r.csv',
+        'prejuizo_anterior': -50000.00
+    }
+]
 
 try:
     from tabulate import tabulate
@@ -444,10 +462,10 @@ def calculate_portfolio_position(operations):
     
     return portfolio
 
-def calculate_tax_compensation(monthly_pnl):
+def calculate_tax_compensation(monthly_pnl, prejuizo_acumulado_anterior_param):
     """
     Calculate fiscal compensation based on Brazilian tax rules for day trading
-    - Starts with previous accumulated loss from PREJUIZO_ACUMULADO_ANTERIOR
+    - Starts with previous accumulated loss from prejuizo_acumulado_anterior_param
     - Negative balance can offset future profits
     - Positive balance assumes DARF payment and resets to zero
     - Only uses final monthly P&L
@@ -456,10 +474,10 @@ def calculate_tax_compensation(monthly_pnl):
     sorted_months = sorted(monthly_pnl.keys())
     
     # Start with previous accumulated loss
-    compensation_balance = PREJUIZO_ACUMULADO_ANTERIOR
+    compensation_balance = prejuizo_acumulado_anterior_param
     monthly_compensation = {}
     
-    print(f"   💼 Iniciando com prejuízo anterior: {format_currency(PREJUIZO_ACUMULADO_ANTERIOR)}")
+    print(f"   💼 Iniciando com prejuízo anterior: {format_currency(prejuizo_acumulado_anterior_param)}")
     
     for month in sorted_months:
         monthly_data = monthly_pnl[month]
@@ -650,165 +668,134 @@ def calculate_monthly_pnl(operations):
     return monthly_pnl
 
 def main():
-    try:
-        # Read the trading data from file
-        with open('notas_extraidas.txt', 'r', encoding='utf-8') as file:
-            file_content = file.read()
-    except FileNotFoundError:
-        print("❌ Erro: Arquivo 'notas_extraidas.txt' não encontrado!")
-        print("Certifique-se de que o arquivo está no mesmo diretório do script.")
-        return
-    except Exception as e:
-        print(f"❌ Erro ao ler o arquivo: {e}")
-        return
-    
-    # Parse operations
-    operations = parse_trading_data(file_content)
-    
-    if not operations:
-        print("❌ Nenhuma operação encontrada no arquivo!")
-        return
-    
-    print(f"✅ {len(operations)} operações carregadas do arquivo.")
-    
-    # Calculate portfolio position
-    portfolio = calculate_portfolio_position(operations)
-    
-    # Calculate monthly P&L
-    monthly_pnl = calculate_monthly_pnl(operations)
-    
-    # Calculate tax compensation
-    print("🧮 Calculando compensação fiscal...")
-    tax_compensation = calculate_tax_compensation(monthly_pnl)
-    print(f"📋 Compensação fiscal calculada para {len(tax_compensation)} meses")
-    
-    # Debug: Show tax compensation details
-    for month, data in tax_compensation.items():
-        print(f"   {month}: P&L={data['monthly_result']:.2f}, Saldo={data['new_balance']:.2f}, Status={data['status']}")
-    
-    # Generate detailed FIFO extract
-    print("🔄 Gerando extrato FIFO detalhado...")
-    try:
-        fifo_extract = generate_fifo_extract(operations)
-        print(f"📋 Extrato gerado com {len(fifo_extract)} registros")
+    overall_success = True
+    for config in CONFIGURATIONS:
+        person_type = config['person_type']
+        input_txt_file = config['input_txt_file']
+        output_json_file = config['output_json_file']
+        output_csv_file = config['output_csv_file'] # New CSV output file per person
+        prejuizo_anterior_config = config['prejuizo_anterior']
         
-        # Save FIFO extract to CSV
-        save_fifo_extract_to_csv(fifo_extract)
+        print(f"\n{'='*30} Iniciando processamento para: {person_type} {'='*30}")
         
-    except Exception as e:
-        print(f"❌ Erro ao gerar extrato FIFO: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    # Display results
-    print("\n" + "=" * 120)
-    print("ANÁLISE DE CARTEIRA - PETROBRAS")
-    print("=" * 120)
-    
-    # =========================================================================
-    # Preparação dos dados para a Tabela 1 (Posição da Carteira) e para o JSON
-    # =========================================================================
-    portfolio_json_data = []
-    for asset, data in portfolio.items():
-        pm_compra = f"{data['avg_buy_price']:.2f}" if data['avg_buy_price'] > 0 else ""
-        pm_venda = f"{data['avg_sell_price']:.2f}" if data['avg_sell_price'] > 0 else ""
-        total_invest = f"{data['total_invested']:,.0f}"
-        total_receb = f"{data['total_received']:,.0f}"
-        pnl_real = f"{data['realized_pnl']:,.0f}"
-        custo_base = f"{data['cost_basis']:,.0f}" if data['current_quantity'] > 0 else ""
-        
-        portfolio_json_data.append({
-            'TICKER': asset,
-            'QTD ATUAL': f"{data['current_quantity']:,}",
-            'PM COMPRA': pm_compra,
-            'PM VENDA': pm_venda,
-            'TOTAL INVEST': total_invest,
-            'TOTAL RECEB': total_receb,
-            'P&L REAL': pnl_real,
-            'CUSTO BASE': custo_base
-        })
+        if not os.path.exists(input_txt_file): # Check if input file exists
+            print(f"❌ Erro: Arquivo de entrada '{input_txt_file}' não encontrado!")
+            print("   Por favor, crie o arquivo ou certifique-se de que 'notas.py' foi executado.")
+            overall_success = False
+            continue # Skip to next configuration
 
-    print("\n📊 POSIÇÃO ATUAL DA CARTEIRA:")
-    headers_portfolio = ['TICKER', 'QTD ATUAL', 'PM COMPRA', 'PM VENDA', 'TOTAL INVEST', 'TOTAL RECEB', 'P&L REAL', 'CUSTO BASE']
-    
-    if TABULATE_AVAILABLE:
-        portfolio_display_data = [list(row.values()) for row in portfolio_json_data]
-        print(tabulate(portfolio_display_data, headers=headers_portfolio, tablefmt='grid', stralign='center', numalign='right'))
+        try:
+            with open(input_txt_file, 'r', encoding='utf-8') as file:
+                file_content = file.read()
+            print(f"✅ Arquivo de entrada '{input_txt_file}' lido com sucesso.")
+        except Exception as e:
+            print(f"❌ Erro ao ler o arquivo '{input_txt_file}': {e}")
+            overall_success = False
+            continue
+
+        operations = parse_trading_data(file_content)
+        if not operations:
+            print(f"⚠️ Nenhuma operação encontrada no arquivo '{input_txt_file}'. Pulando para a próxima configuração se houver.")
+            # Not necessarily a failure for overall_success if file is just empty.
+            # If it's critical that operations exist, then set overall_success = False
+            continue
+        print(f"✅ {len(operations)} operações carregadas do arquivo '{input_txt_file}'.")
+
+        portfolio = calculate_portfolio_position(operations)
+        monthly_pnl = calculate_monthly_pnl(operations)
+        
+        print(f"🧮 Calculando compensação fiscal para {person_type} com prejuízo anterior de {prejuizo_anterior_config:.2f}...")
+        tax_compensation = calculate_tax_compensation(monthly_pnl, prejuizo_anterior_config)
+        # print(f"📋 Compensação fiscal calculada para {len(tax_compensation)} meses para {person_type}") # Verbose
+
+        # Debug: Show tax compensation details (optional)
+        # for month, data in tax_compensation.items():
+        #     print(f"   {month}: P&L={data['monthly_result']:.2f}, Saldo={data['new_balance']:.2f}, Status={data['status']}")
+
+        print(f"🔄 Gerando extrato FIFO detalhado para {person_type}...")
+        try:
+            fifo_extract = generate_fifo_extract(operations)
+            # print(f"📋 Extrato FIFO gerado com {len(fifo_extract)} registros para {person_type}") # Verbose
+            save_fifo_extract_to_csv(fifo_extract, filename=output_csv_file) # Pass the specific filename
+        except Exception as e:
+            print(f"❌ Erro ao gerar ou salvar extrato FIFO para {person_type}: {e}")
+            import traceback
+            traceback.print_exc()
+            overall_success = False
+        
+        # Display results (simplified, full data in JSON)
+        print(f"\n--- ANÁLISE DE CARTEIRA - {person_type} ---")
+        
+        portfolio_json_data = []
+        for asset, data in portfolio.items():
+            portfolio_json_data.append({
+                'TICKER': asset, 'QTD ATUAL': f"{data['current_quantity']:,}",
+                'PM COMPRA': format_currency(data['avg_buy_price']) if data['avg_buy_price'] > 0 else "",
+                'PM VENDA': format_currency(data['avg_sell_price']) if data['avg_sell_price'] > 0 else "",
+                'TOTAL INVEST': format_currency(data['total_invested']),
+                'TOTAL RECEB': format_currency(data['total_received']),
+                'P&L REAL': format_currency(data['realized_pnl']),
+                'CUSTO BASE': format_currency(data['cost_basis']) if data['current_quantity'] > 0 else ""
+            })
+
+        if TABULATE_AVAILABLE and portfolio_json_data:
+            print("\n📊 POSIÇÃO ATUAL DA CARTEIRA:")
+            print(tabulate([list(row.values()) for row in portfolio_json_data], headers=list(portfolio_json_data[0].keys()), tablefmt='grid', stralign='center', numalign='right'))
+        elif portfolio_json_data:
+            print("\n📊 POSIÇÃO ATUAL DA CARTEIRA (formato simples):")
+            for row in portfolio_json_data: print(row)
+
+
+        monthly_json_data = []
+        for month_key in sorted(monthly_pnl.keys()): # Use month_key to avoid conflict
+            data = monthly_pnl[month_key]
+            tax_data = tax_compensation.get(month_key, {})
+            monthly_json_data.append({
+                'MÊS': month_key, 'COMPRAS': format_currency(data['total_bought']),
+                'VENDAS': format_currency(data['total_sold']),
+                'P&L REALIZADO': format_currency(data['realized_pnl']),
+                'POS FECHADAS': data['closed_positions'],
+                'SALDO FISCAL': format_currency(tax_data.get('new_balance', 0)),
+                'IMPOSTO DEVIDO': format_currency(tax_data.get('tax_due', 0)),
+                'STATUS FISCAL': tax_data.get('status', '')
+            })
+
+        if TABULATE_AVAILABLE and monthly_json_data:
+            print("\n📈 RESULTADO POR MÊS COM COMPENSAÇÃO FISCAL:")
+            print(tabulate([list(row.values()) for row in monthly_json_data], headers=list(monthly_json_data[0].keys()), tablefmt='grid', stralign='center', numalign='right'))
+        elif monthly_json_data:
+            print("\n📈 RESULTADO POR MÊS COM COMPENSAÇÃO FISCAL (formato simples):")
+            for row in monthly_json_data: print(row)
+
+        # JSON output structure
+        json_output_data = {
+             "configuracao_utilizada": {
+                "tipo_pessoa": person_type,
+                "arquivo_entrada_txt": input_txt_file,
+                "arquivo_saida_json": output_json_file,
+                "arquivo_saida_csv": output_csv_file,
+                "prejuizo_anterior_informado": prejuizo_anterior_config
+            },
+            "sumario_executivo": {
+                 "total_operacoes_carregadas": len(operations),
+                 "total_ativos_carteira": len(portfolio_json_data),
+                 "meses_com_atividade": len(monthly_json_data),
+            },
+            "posicao_atual_carteira": portfolio_json_data,
+            "resultado_mensal_com_compensacao_fiscal": monthly_json_data
+        }
+        try:
+            with open(output_json_file, 'w', encoding='utf-8') as json_file:
+                json.dump(json_output_data, json_file, ensure_ascii=False, indent=4)
+            print(f"\n✅ Relatório fiscal para {person_type} salvo em '{output_json_file}'")
+        except Exception as e:
+            print(f"\n❌ Erro ao salvar o arquivo JSON '{output_json_file}': {e}")
+            overall_success = False
+
+    if overall_success:
+        print("\n\n🎉 Processamento de todos os relatórios concluído com sucesso! 🎉")
     else:
-        print("-" * 120)
-        print(f"{headers_portfolio[0]:<12} {headers_portfolio[1]:<10} {headers_portfolio[2]:<12} {headers_portfolio[3]:<12} {headers_portfolio[4]:<15} {headers_portfolio[5]:<15} {headers_portfolio[6]:<12} {headers_portfolio[7]:<15}")
-        print("-" * 120)
-        for row in portfolio_json_data:
-            print(f"{row['TICKER']:<12} {row['QTD ATUAL']:<10} {row['PM COMPRA']:<12} {row['PM VENDA']:<12} {row['TOTAL INVEST']:<15} {row['TOTAL RECEB']:<15} {row['P&L REAL']:<12} {row['CUSTO BASE']:<15}")
-
-    # =====================================================================================
-    # Preparação dos dados para a Tabela 2 (Resultado Mensal com Compensação) e para o JSON
-    # =====================================================================================
-    monthly_json_data = []
-    for month in sorted(monthly_pnl.keys()):
-        data = monthly_pnl[month]
-        tax_data = tax_compensation.get(month, {})
-        
-        compras = f"{data['total_bought']:,.0f}"
-        vendas = f"{data['total_sold']:,.0f}"
-        pnl = format_currency(data['realized_pnl'])
-        saldo_fiscal = format_currency(tax_data.get('new_balance', 0))
-        imposto = format_currency(tax_data.get('tax_due', 0))
-        status = tax_data.get('status', '')
-        
-        monthly_json_data.append({
-            'MÊS': month,
-            'COMPRAS': compras,
-            'VENDAS': vendas,
-            'P&L REALIZADO': pnl,
-            'POS FECHADAS': data['closed_positions'],
-            'SALDO FISCAL': saldo_fiscal,
-            'IMPOSTO DEVIDO': imposto,
-            'STATUS FISCAL': status
-        })
-
-    print("\n📈 RESULTADO POR MÊS COM COMPENSAÇÃO FISCAL:")
-    headers_monthly = ['MÊS', 'COMPRAS', 'VENDAS', 'P&L REALIZADO', 'POS FECHADAS', 'SALDO FISCAL', 'IMPOSTO DEVIDO', 'STATUS FISCAL']
-
-    if TABULATE_AVAILABLE:
-        monthly_display_data = [list(row.values()) for row in monthly_json_data]
-        print(tabulate(monthly_display_data, headers=headers_monthly, tablefmt='grid', stralign='center', numalign='right'))
-    else:
-        print("-" * 140)
-        print(f"{headers_monthly[0]:<10} {headers_monthly[1]:<15} {headers_monthly[2]:<15} {headers_monthly[3]:<15} {headers_monthly[4]:<5} {headers_monthly[5]:<15} {headers_monthly[6]:<15} {headers_monthly[7]:<20}")
-        print("-" * 140)
-        for row in monthly_json_data:
-            print(f"{row['MÊS']:<10} {row['COMPRAS']:<15} {row['VENDAS']:<15} {row['P&L REALIZADO']:<15} {row['POS FECHADAS']:<5} {row['SALDO FISCAL']:<15} {row['IMPOSTO DEVIDO']:<15} {row['STATUS FISCAL']:<20}")
-        print("-" * 140)
-    
-    # Add fiscal summary
-    final_balance = 0
-    total_taxes = 0
-    if tax_compensation:
-        final_balance = list(tax_compensation.values())[-1].get('new_balance', 0)
-        total_taxes = sum(data.get('tax_due', 0) for data in tax_compensation.values())
-    
-    # Summary totals
-    total_invested = sum(data['total_invested'] for data in portfolio.values())
-    total_received = sum(data['total_received'] for data in portfolio.values())
-    total_realized_pnl = sum(data['realized_pnl'] for data in portfolio.values())
-    total_current_qty = sum(data['current_quantity'] for data in portfolio.values())
-    total_cost_basis = sum(data['cost_basis'] for data in portfolio.values())
-
-    # =================================================
-    # NOVA SEÇÃO: Salvar os resultados em fiscal_m.json
-    # =================================================
-    json_output_data = {
-        "posicao_atual_carteira": portfolio_json_data,
-        "resultado_mensal_com_compensacao_fiscal": monthly_json_data
-    }
-    
-    try:
-        with open('fiscal_r.json', 'w', encoding='utf-8') as json_file:
-            json.dump(json_output_data, json_file, ensure_ascii=False, indent=4)
-        print("\n✅ Relatório fiscal salvo com sucesso no arquivo 'fiscal_m.json'")
-    except Exception as e:
-        print(f"\n❌ Erro ao salvar o arquivo JSON: {e}")
+        print("\n\n⚠️ Processamento concluído com um ou mais erros. Verifique os logs. ⚠️")
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,298 @@
+{
+    "configuracao_utilizada": {
+        "tipo_pessoa": "R",
+        "arquivo_entrada_txt": "notas_extraidas_r.txt",
+        "arquivo_saida_json": "fiscal_r.json",
+        "arquivo_saida_csv": "extrato_fifo_detalhado_r.csv",
+        "prejuizo_anterior_informado": -50000.0
+    },
+    "sumario_executivo": {
+        "total_operacoes_carregadas": 285,
+        "total_ativos_carteira": 26,
+        "meses_com_atividade": 2
+    },
+    "posicao_atual_carteira": [
+        {
+            "TICKER": "PETRF359",
+            "QTD ATUAL": "0",
+            "PM COMPRA": "0,20",
+            "PM VENDA": "1,05",
+            "TOTAL INVEST": "260,60",
+            "TOTAL RECEB": "1.362,08",
+            "P&L REAL": "1.101,48",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "PETRR361",
+            "QTD ATUAL": "0",
+            "PM COMPRA": "1,33",
+            "PM VENDA": "1,48",
+            "TOTAL INVEST": "1.733,44",
+            "TOTAL RECEB": "1.919,53",
+            "P&L REAL": "186,09",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII EUROPAR ",
+            "QTD ATUAL": "-23",
+            "PM COMPRA": "",
+            "PM VENDA": "231,85",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "5.332,59",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "PETROBRAS ON",
+            "QTD ATUAL": "0",
+            "PM COMPRA": "34,36",
+            "PM VENDA": "33,14",
+            "TOTAL INVEST": "44.669,47",
+            "TOTAL RECEB": "43.079,52",
+            "P&L REAL": "-1.589,95",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII VINCI LG",
+            "QTD ATUAL": "-40",
+            "PM COMPRA": "",
+            "PM VENDA": "85,53",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "3.421,34",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII MERITO I",
+            "QTD ATUAL": "-51",
+            "PM COMPRA": "",
+            "PM VENDA": "83,47",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "4.257,04",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII FATOR VE",
+            "QTD ATUAL": "-41",
+            "PM COMPRA": "",
+            "PM VENDA": "80,11",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "3.284,39",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII VOT LOG ",
+            "QTD ATUAL": "-36",
+            "PM COMPRA": "",
+            "PM VENDA": "90,31",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "3.251,26",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII BEES CRI",
+            "QTD ATUAL": "-66",
+            "PM COMPRA": "",
+            "PM VENDA": "67,94",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "4.484,06",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII RIONEGRO",
+            "QTD ATUAL": "-57",
+            "PM COMPRA": "",
+            "PM VENDA": "44,94",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "2.561,57",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII OURI JPP",
+            "QTD ATUAL": "-35",
+            "PM COMPRA": "",
+            "PM VENDA": "80,47",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "2.816,48",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII TG ATIVO",
+            "QTD ATUAL": "-45",
+            "PM COMPRA": "",
+            "PM VENDA": "88,30",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "3.973,38",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FIAGRO KINEA",
+            "QTD ATUAL": "-56",
+            "PM COMPRA": "",
+            "PM VENDA": "96,05",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "5.378,55",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII ANH EDUC",
+            "QTD ATUAL": "-89",
+            "PM COMPRA": "",
+            "PM VENDA": "143,46",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "12.768,36",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII BTG CRI ",
+            "QTD ATUAL": "-466",
+            "PM COMPRA": "",
+            "PM VENDA": "9,25",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "4.308,95",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII G TOWERS",
+            "QTD ATUAL": "-49",
+            "PM COMPRA": "",
+            "PM VENDA": "76,42",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "3.744,57",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII HECTARE ",
+            "QTD ATUAL": "-84",
+            "PM COMPRA": "",
+            "PM VENDA": "24,78",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "2.081,63",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII CEO CCP ",
+            "QTD ATUAL": "-90",
+            "PM COMPRA": "",
+            "PM VENDA": "41,01",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "3.691,06",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FIAGRO RIZA ",
+            "QTD ATUAL": "-101",
+            "PM COMPRA": "",
+            "PM VENDA": "8,79",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "887,47",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII REC REND",
+            "QTD ATUAL": "-56",
+            "PM COMPRA": "",
+            "PM VENDA": "32,75",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "1.834,13",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "FII GGRCOVEP",
+            "QTD ATUAL": "-450",
+            "PM COMPRA": "",
+            "PM VENDA": "10,08",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "4.534,37",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "PETRS312",
+            "QTD ATUAL": "0",
+            "PM COMPRA": "0,89",
+            "PM VENDA": "0,17",
+            "TOTAL INVEST": "45.277,28",
+            "TOTAL RECEB": "8.607,06",
+            "P&L REAL": "-36.670,22",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "PETRG312",
+            "QTD ATUAL": "0",
+            "PM COMPRA": "3,78",
+            "PM VENDA": "1,27",
+            "TOTAL INVEST": "124.204,84",
+            "TOTAL RECEB": "41.753,41",
+            "P&L REAL": "-82.451,43",
+            "CUSTO BASE": ""
+        },
+        {
+            "TICKER": "PETROBRAS PN",
+            "QTD ATUAL": "39,300",
+            "PM COMPRA": "29,64",
+            "PM VENDA": "32,94",
+            "TOTAL INVEST": "1.265.534,43",
+            "TOTAL RECEB": "111.990,62",
+            "P&L REAL": "9.796,64",
+            "CUSTO BASE": "1.163.340,45"
+        },
+        {
+            "TICKER": "PETRS342",
+            "QTD ATUAL": "46,200",
+            "PM COMPRA": "0,80",
+            "PM VENDA": "",
+            "TOTAL INVEST": "37.011,20",
+            "TOTAL RECEB": "0,00",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": "37.011,20"
+        },
+        {
+            "TICKER": "PETRG342",
+            "QTD ATUAL": "-32,500",
+            "PM COMPRA": "",
+            "PM VENDA": "1,37",
+            "TOTAL INVEST": "0,00",
+            "TOTAL RECEB": "44.533,23",
+            "P&L REAL": "0,00",
+            "CUSTO BASE": ""
+        }
+    ],
+    "resultado_mensal_com_compensacao_fiscal": [
+        {
+            "MÊS": "05/2025",
+            "COMPRAS": "46.402,91",
+            "VENDAS": "1.362,08",
+            "P&L REALIZADO": "0,00",
+            "POS FECHADAS": 0,
+            "SALDO FISCAL": "-50.000,00",
+            "IMPOSTO DEVIDO": "0,00",
+            "STATUS FISCAL": "SEM RESULTADO"
+        },
+        {
+            "MÊS": "06/2025",
+            "COMPRAS": "1.472.288,35",
+            "VENDAS": "324.494,57",
+            "P&L REALIZADO": "-109.627,39",
+            "POS FECHADAS": 107,
+            "SALDO FISCAL": "-159.627,39",
+            "IMPOSTO DEVIDO": "0,00",
+            "STATUS FISCAL": "PREJUÍZO ACUMULADO"
+        }
+    ]
+}
