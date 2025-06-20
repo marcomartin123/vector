@@ -1205,48 +1205,75 @@ class OptionStrategyApp:
         except tk.TclError:
             messagebox.showerror("Erro", "Não foi possível acessar a área de transferência.")
 
-    def run_sync_scripts_threaded(self):
-        # Disable button during sync
+    def run_sync_scripts_threaded(self, progress_popup_instance):
+        # Disable button during sync (use after_idle for UI changes from thread)
         if hasattr(self, 'sync_btn'):
-            self.sync_btn.config(state=tk.DISABLED, text="Sincronizando...")
+            self.root.after_idle(lambda: self.sync_btn.config(state=tk.DISABLED, text="Sincronizando..."))
 
         try:
-            # Run notas.py
-            messagebox.showinfo("Sincronização", "Iniciando execução de notas.py...", parent=self.root) # parent=self.root for proper modal behavior
+            # Update UI for notas.py start
+            self.root.after_idle(progress_popup_instance.update_progress, "notas", "Executando...")
+            
             process_notas = subprocess.run([sys.executable, 'notas.py'], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace')
 
             if process_notas.returncode == 0:
-                messagebox.showinfo("Sincronização", "notas.py executado com sucesso!", parent=self.root)
-                # Run relat.py
-                messagebox.showinfo("Sincronização", "Iniciando execução de relat.py...", parent=self.root)
+                self.root.after_idle(progress_popup_instance.update_progress, "notas", "Concluído!", 100)
+
+                # Update UI for relat.py start
+                self.root.after_idle(progress_popup_instance.update_progress, "relat", "Executando...")
                 process_relat = subprocess.run([sys.executable, 'relat.py'], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace')
 
                 if process_relat.returncode == 0:
-                    messagebox.showinfo("Sincronização", "relat.py executado com sucesso! Sincronização completa.", parent=self.root)
+                    self.root.after_idle(progress_popup_instance.update_progress, "relat", "Concluído!", 100)
+                    self.root.after_idle(progress_popup_instance.show_close_button)
                     # Optionally, refresh data in the app after sync
-                    # self.load_position_view(self.current_position_key) # Example: Re-load current view
+                    # self.root.after_idle(self.load_position_view, self.current_position_key) # Example
                 else:
+                    self.root.after_idle(progress_popup_instance.update_progress, "relat", "Erro!", 0)
                     error_message = f"Erro ao executar relat.py:\nReturn Code: {process_relat.returncode}\nOutput:\n{process_relat.stdout}\nError:\n{process_relat.stderr}"
                     print(error_message) # Log to console as well
-                    messagebox.showerror("Erro de Sincronização", error_message, parent=self.root)
+                    parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
+                    self.root.after_idle(messagebox.showerror, "Erro em relat.py", error_message, parent=parent_window)
+                    self.root.after_idle(progress_popup_instance.show_close_button)
             else:
+                self.root.after_idle(progress_popup_instance.update_progress, "notas", "Erro!", 0)
+                # Also set relat.py to "Não executado" or similar if notas.py fails
+                self.root.after_idle(progress_popup_instance.update_progress, "relat", "Não executado", 0)
                 error_message = f"Erro ao executar notas.py:\nReturn Code: {process_notas.returncode}\nOutput:\n{process_notas.stdout}\nError:\n{process_notas.stderr}"
                 print(error_message) # Log to console as well
-                messagebox.showerror("Erro de Sincronização", error_message, parent=self.root)
+                parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
+                self.root.after_idle(messagebox.showerror, "Erro em notas.py", error_message, parent=parent_window)
+                self.root.after_idle(progress_popup_instance.show_close_button)
 
         except FileNotFoundError as e:
-            messagebox.showerror("Erro de Sincronização", f"Script não encontrado: {e}. Certifique-se que notas.py e relat.py estão no diretório raiz.", parent=self.root)
+            self.root.after_idle(progress_popup_instance.update_progress, "notas", "Erro de Arquivo!", 0)
+            self.root.after_idle(progress_popup_instance.update_progress, "relat", "Erro de Arquivo!", 0)
+            error_msg_fnf = f"Script não encontrado: {e}. Certifique-se que notas.py e relat.py estão no diretório raiz."
+            print(error_msg_fnf)
+            parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
+            self.root.after_idle(messagebox.showerror, "Erro de Arquivo", error_msg_fnf, parent=parent_window)
+            self.root.after_idle(progress_popup_instance.show_close_button)
         except Exception as e:
-            messagebox.showerror("Erro de Sincronização", f"Ocorreu um erro inesperado: {e}", parent=self.root)
+            self.root.after_idle(progress_popup_instance.update_progress, "notas", "Erro Inesperado!", 0)
+            self.root.after_idle(progress_popup_instance.update_progress, "relat", "Erro Inesperado!", 0)
+            error_msg_exc = f"Ocorreu um erro inesperado: {e}"
+            print(error_msg_exc)
+            parent_window = progress_popup_instance.popup if progress_popup_instance and hasattr(progress_popup_instance, 'popup') and progress_popup_instance.popup.winfo_exists() else self.root
+            self.root.after_idle(messagebox.showerror, "Erro Inesperado", error_msg_exc, parent=parent_window)
+            self.root.after_idle(progress_popup_instance.show_close_button)
         finally:
-            # Re-enable button
-            if hasattr(self, 'sync_btn') and self.sync_btn.winfo_exists(): # Check if widget still exists
-                 self.sync_btn.config(state=tk.NORMAL, text="Sync")
+            # Re-enable button (use after_idle)
+            if hasattr(self, 'sync_btn') and self.sync_btn.winfo_exists():
+                 self.root.after_idle(lambda: self.sync_btn.config(state=tk.NORMAL, text="Sy"))
 
     def run_sync_scripts(self):
-        # Run the script processing in a separate thread to keep UI responsive
-        thread = threading.Thread(target=self.run_sync_scripts_threaded)
-        thread.daemon = True  # Allows main program to exit even if thread is running
+        # Create the popup in the main thread
+        self.progress_popup = SyncProgressPopup(self.root) 
+
+        # Run the script processing in a separate thread
+        # Pass the popup instance to the threaded function
+        thread = threading.Thread(target=self.run_sync_scripts_threaded, args=(self.progress_popup,))
+        thread.daemon = True
         thread.start()
 
     # --- INÍCIO DA MODIFICAÇÃO 3: Lógica genérica para Popup Fiscal ---
@@ -1338,6 +1365,80 @@ class OptionStrategyApp:
 
         return frame
     # --- FIM DA MODIFICAÇÃO 3 ---
+
+class SyncProgressPopup:
+    def __init__(self, master):
+        self.master = master
+        self.popup = tk.Toplevel(master)
+        self.popup.title("Sincronizando Scripts...")
+        self.popup.transient(master)
+        self.popup.grab_set()
+        self.popup.geometry("300x150")
+        # Prevent closing via window manager until explicitly allowed
+        self.popup.protocol("WM_DELETE_WINDOW", lambda: None)
+
+
+        # UI Elements
+        pad_options = {'padx': 10, 'pady': 5}
+
+        # notas.py
+        ttk.Label(self.popup, text="notas.py:").grid(row=0, column=0, sticky=tk.W, **pad_options)
+        self.notas_progress = ttk.Progressbar(self.popup, orient=tk.HORIZONTAL, length=150, mode='indeterminate')
+        self.notas_progress.grid(row=0, column=1, **pad_options)
+        self.notas_status_label = ttk.Label(self.popup, text="Aguardando...")
+        self.notas_status_label.grid(row=0, column=2, sticky=tk.W, **pad_options)
+
+        # relat.py
+        ttk.Label(self.popup, text="relat.py:").grid(row=1, column=0, sticky=tk.W, **pad_options)
+        self.relat_progress = ttk.Progressbar(self.popup, orient=tk.HORIZONTAL, length=150, mode='indeterminate')
+        self.relat_progress.grid(row=1, column=1, **pad_options)
+        self.relat_status_label = ttk.Label(self.popup, text="Aguardando...")
+        self.relat_status_label.grid(row=1, column=2, sticky=tk.W, **pad_options)
+
+        # Center the popup
+        self.popup.update_idletasks()
+        x = master.winfo_x() + (master.winfo_width() / 2) - (self.popup.winfo_width() / 2)
+        y = master.winfo_y() + (master.winfo_height() / 2) - (self.popup.winfo_height() / 2)
+        self.popup.geometry(f"+{int(x)}+{int(y)}")
+        
+        # Start progress bars in indeterminate mode
+        self.notas_progress.start()
+        self.relat_progress.start()
+
+    def update_progress(self, script_name, status, progress_value=None):
+        if script_name == "notas":
+            progress_bar = self.notas_progress
+            status_label = self.notas_status_label
+        elif script_name == "relat":
+            progress_bar = self.relat_progress
+            status_label = self.relat_status_label
+        else:
+            return # Unknown script
+
+        status_label.config(text=status)
+
+        if progress_value is None:
+            progress_bar.config(mode='indeterminate')
+            progress_bar.start()
+        else:
+            progress_bar.stop() # Stop indeterminate mode if it was running
+            progress_bar.config(mode='determinate', value=progress_value)
+            if progress_value == 100: # If complete, ensure it shows 100%
+                 progress_bar['value'] = 100
+
+
+    def show_close_button(self):
+        # Enable closing via window manager
+        self.popup.protocol("WM_DELETE_WINDOW", self.close)
+        
+        # Add a close button
+        self.close_button = ttk.Button(self.popup, text="Fechar", command=self.close)
+        self.close_button.grid(row=2, column=0, columnspan=3, pady=10)
+
+    def close(self):
+        self.popup.grab_release() # Release grab before destroying
+        self.popup.destroy()
+
 
 if __name__ == "__main__":
     root = tk.Tk()
