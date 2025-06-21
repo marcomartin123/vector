@@ -446,7 +446,7 @@ class OptionStrategyApp:
 
         # --- INÍCIO MODIFICAÇÃO GRÁFICO ---
         graph_frame = ttk.LabelFrame(self.right_vertical_pane, text="Gráficos de Payout")
-        self.fig, (self.ax_left, self.ax_right) = plt.subplots(1, 2, sharey=True, figsize=(10, 4),gridspec_kw={'width_ratios': [1, 1]})
+        self.fig, (self.ax_left, self.ax_right) = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(10, 4),gridspec_kw={'width_ratios': [1, 1]})
         # --- FIM MODIFICAÇÃO GRÁFICO ---
         self.canvas = FigureCanvasTkAgg(self.fig, master=graph_frame)
         self.canvas.draw() # Adicionado para garantir que o canvas seja desenhado
