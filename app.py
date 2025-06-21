@@ -28,7 +28,7 @@ FISCAL_R_FILE = 'fiscal_r.json' # Updated path
 # --- FIM DA MODIFICAÇÃO 1 ---
 TARGET_FONT = ('Consolas', 9)
 TARGET_FONT_BOLD = ('Consolas', 9)
-EVENT_DEBOUNCE_MS = 170
+EVENT_DEBOUNCE_MS = 300
 
 def mt5_connect():
     if not mt5.initialize():
@@ -88,13 +88,15 @@ class OptionStrategyApp:
 
         self.df_options, self.current_asset_price, self.selected_option_pair = None, None, None
         self.mt5_prices, self.current_position, self.tree_item_map = {}, {}, {}
+        self.ax_left, self.ax_right = None, None # MODIFICADO: Para os dois gráficos
         self.current_position_key = 'T'
         self._tree_sort_column, self._tree_sort_reverse = None, False
         self.last_filtered_df_for_treeview = pd.DataFrame()
         self._debounce_job = None
         self._goal_seek_debounce_job = None
-        self.last_graph_pnl_pct = 0.0
-        
+        self.last_graph_pnl_pct_sim = 0.0 # MODIFICADO: PnL% para gráfico de simulação
+        self.last_graph_pnl_pct_pos = 0.0 # NOVO: PnL% para gráfico de posição
+
         self.qty_spinboxes = {}
         self.price_entries = {}
         self.unwind_qty_spinboxes = {}
@@ -326,6 +328,10 @@ class OptionStrategyApp:
     def _update_all_dynamic_info(self):
         self.update_position_display()
         self.calculate_and_display_rollover()
+        # --- INÍCIO MODIFICAÇÃO GRÁFICO ---
+        # A chamada para atualizar os gráficos agora está centralizada aqui
+        self._update_payout_graphs()
+        # --- FIM MODIFICAÇÃO GRÁFICO ---
         
     def _populate_unwind_boxes_from_position(self):
         if self.current_position:
@@ -438,8 +444,10 @@ class OptionStrategyApp:
         self.right_vertical_pane = ttk.PanedWindow(right_main_frame, orient=tk.VERTICAL)
         self.right_vertical_pane.pack(fill=tk.BOTH, expand=True)
 
-        graph_frame = ttk.LabelFrame(self.right_vertical_pane, text="Gráfico de Payout")
-        self.fig, self.ax = plt.subplots()
+        # --- INÍCIO MODIFICAÇÃO GRÁFICO ---
+        graph_frame = ttk.LabelFrame(self.right_vertical_pane, text="Gráficos de Payout")
+        self.fig, (self.ax_left, self.ax_right) = plt.subplots(1, 2, sharey=True, figsize=(10, 4),gridspec_kw={'width_ratios': [1, 1]})
+        # --- FIM MODIFICAÇÃO GRÁFICO ---
         self.canvas = FigureCanvasTkAgg(self.fig, master=graph_frame)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         self.right_vertical_pane.add(graph_frame, weight=2)
@@ -579,7 +587,7 @@ class OptionStrategyApp:
         calc_button.grid(row=0, column=4, sticky='ew', padx=(10,0))
         advanced_goal_seek_frame.columnconfigure(4, weight=1)
 
-        self.clear_plot()
+        self.clear_plots()
 
     def trigger_recalculation(self, event=None):
         if self._debounce_job: self.root.after_cancel(self._debounce_job)
@@ -591,7 +599,14 @@ class OptionStrategyApp:
         self._goal_seek_debounce_job = self.root.after(EVENT_DEBOUNCE_MS, self.perform_d2_goal_seek)
 
     def on_input_change(self):
-        self.calculate_and_plot()
+        self._update_payout_graphs()
+        
+        params = self._get_strategy_parameters()
+        if params:
+            self._update_summary_widgets(params)
+        else:
+            self.update_details_text_initial()
+
         self.calculate_and_display_rollover()
         self.update_position_display()
 
@@ -638,13 +653,71 @@ class OptionStrategyApp:
         except (ValueError, KeyError, AttributeError):
             return None
 
-    def calculate_and_plot(self):
+    # --- INÍCIO MODIFICAÇÃO GRÁFICO: LÓGICA DE PLOTAGEM SEPARADA ---
+    def _plot_simulation_payout(self):
+        """Calcula e plota o payoff para a operação de simulação (gráfico da esquerda)."""
         params = self._get_strategy_parameters()
-        if params is None: self.clear_plot(); self.update_details_text_initial(); return
-        pc_range = np.linspace(-0.30, 0.30, 250); expiry_prices = params['asset_p'] * (1 + pc_range)
-        pnl_values = np.array([((p - params['asset_p']) * params['asset_q']) + ((params['call_p'] - max(0, p - params['strike'])) * params['call_q']) + ((max(0, params['strike'] - p) - params['put_p']) * params['put_q']) for p in expiry_prices])
-        self._update_payout_graph(pc_range, pnl_values, params)
-        self._update_summary_widgets(params)
+        if params is None:
+            return
+
+        pc_range = np.linspace(-0.30, 0.30, 250)
+        expiry_prices = params['asset_p'] * (1 + pc_range)
+        pnl_values = np.array([
+            ((p - params['asset_p']) * params['asset_q']) +
+            ((params['call_p'] - max(0, p - params['strike'])) * params['call_q']) +
+            ((max(0, params['strike'] - p) - params['put_p']) * params['put_q'])
+            for p in expiry_prices
+        ])
+
+        asset_name = self.selected_option_pair.get('ativo_principal') if self.selected_option_pair else None
+        self._render_payout_on_axis(self.ax_left, pc_range, pnl_values, params, "Simulação Montagem/Rolagem", asset_name, 'last_graph_pnl_pct_sim')
+
+    def _plot_position_payout(self):
+        """Calcula e plota o payoff para a posição atual (gráfico da direita)."""
+        if not self.current_position or 'tickers' not in self.current_position:
+            return
+
+        params = self.current_position
+        if params.get('asset_p', 0) == 0 or params.get('strike') is None:
+            return
+
+        pc_range = np.linspace(-0.30, 0.30, 250)
+        expiry_prices = params['asset_p'] * (1 + pc_range)
+        pnl_values = np.array([
+            ((p - params.get('asset_p', 0)) * params.get('asset_q', 0)) +
+            ((params.get('call_p', 0) - max(0, p - params.get('strike', 0))) * params.get('call_q', 0)) +
+            ((max(0, params.get('strike', 0) - p) - params.get('put_p', 0)) * params.get('put_q', 0))
+            for p in expiry_prices
+        ])
+
+        asset_name = params.get('tickers', {}).get('asset')
+        self._render_payout_on_axis(self.ax_right, pc_range, pnl_values, params, f"Posição Atual ({self.current_position_key})", asset_name, 'last_graph_pnl_pct_pos')
+
+    def _update_payout_graphs(self):
+        """Limpa e redesenha ambos os gráficos de payoff."""
+        for ax in [self.ax_left, self.ax_right]:
+            ax.clear()
+            ax.grid(True, linestyle=':', alpha=0.7)
+            ax.axhline(0, color='black', linestyle='--', linewidth=1)
+            ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
+            ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
+
+        self.ax_left.set_title("Simulação Montagem/Rolagem", fontsize=9)
+        self.ax_right.set_title(f"Posição Atual ({self.current_position_key})", fontsize=9)
+        
+        self._plot_simulation_payout()
+        self._plot_position_payout()
+        
+        self.fig.tight_layout(pad=0.5)
+        self.canvas.draw()
+    # --- FIM MODIFICAÇÃO GRÁFICO ---
+
+    def calculate_and_plot(self):
+        # Esta função foi substituída pela nova lógica, mas é mantida por segurança caso haja alguma chamada antiga
+        self._update_payout_graphs()
+        params = self._get_strategy_parameters()
+        if params:
+            self._update_summary_widgets(params)
     
     def _calculate_rollover_d2_flow(self, assembly_params, unwind_quantities):
         if not self.current_position or not self.selected_option_pair: return None
@@ -943,9 +1016,9 @@ class OptionStrategyApp:
         self.qty_spinboxes["Ações"]["var"].set(pos.get('asset_q', 0))
         self.qty_spinboxes["Calls"]["var"].set(pos.get('call_q', 0))
         self.qty_spinboxes["Puts"]["var"].set(pos.get('put_q', 0))
-        self.price_entries["Ações"]["var"].set(f"{pos.get('asset_p', 0):.2f}")
-        self.price_entries["Calls"]["var"].set(f"{pos.get('call_p', 0):.2f}")
-        self.price_entries["Puts"]["var"].set(f"{pos.get('put_p', 0):.2f}")
+        self.price_entries["Ações"]["var"].set(f"{pos.get('asset_p', 0):.6f}")
+        self.price_entries["Calls"]["var"].set(f"{pos.get('call_p', 0):.6f}")
+        self.price_entries["Puts"]["var"].set(f"{pos.get('put_p', 0):.6f}")
         self.trigger_recalculation()
 
     def update_position_display(self):
@@ -997,7 +1070,12 @@ class OptionStrategyApp:
         widget.insert(tk.END, f"R$ {resultado_atual:,.2f}\n", "positivo" if resultado_atual >= 0 else "negativo")
         widget.insert(tk.END, "Resultado Atual %: ")
         widget.insert(tk.END, f"{resultado_pct:+.2f}%\n", "positivo" if resultado_pct >= 0 else "negativo")
-        graph_pnl_pct = getattr(self, 'last_graph_pnl_pct', 0.0)
+        
+        # --- INÍCIO MODIFICAÇÃO GRÁFICO ---
+        # Usa o PnL do gráfico da posição (direita) para o custo de saída
+        graph_pnl_pct = getattr(self, 'last_graph_pnl_pct_pos', 0.0)
+        # --- FIM MODIFICAÇÃO GRÁFICO ---
+        
         exit_cost_pct = max(0, graph_pnl_pct - resultado_pct)
         widget.insert(tk.END, "Custo saída: ")
         widget.insert(tk.END, f"{exit_cost_pct:+.2f}%\n", "positivo")
@@ -1005,58 +1083,72 @@ class OptionStrategyApp:
 
         self._update_target_profit_pct()
 
-    def _update_payout_graph(self, pc_range, pnl_values, params):
-        self.ax.clear()
-        self.last_graph_pnl_pct = 0.0
+    # --- INÍCIO MODIFICAÇÃO GRÁFICO: LÓGICA DE PLOTAGEM GENÉRICA ---
+    def _render_payout_on_axis(self, ax, pc_range, pnl_values, params, title, asset_name, pnl_pct_attr_name):
+        """Função genérica para renderizar um gráfico de payoff em um eixo (ax) específico."""
+        setattr(self, pnl_pct_attr_name, 0.0)
         graph_font_size = 8
-        self.ax.tick_params(axis='both', which='major', labelsize=graph_font_size, colors='blue')
-        capital_base = abs((params['asset_p'] * params['asset_q']) - (params['call_p'] * params['call_q']) + (params['put_p'] * params['put_q']))
-        if capital_base < 0.01: capital_base = params['asset_p'] * params['asset_q']
+        ax.set_title(title, fontsize=9)
+        ax.tick_params(axis='both', which='major', labelsize=graph_font_size, colors='blue')
+
+        capital_base = abs((params.get('asset_p', 0) * params.get('asset_q', 0)) -
+                           (params.get('call_p', 0) * params.get('call_q', 0)) +
+                           (params.get('put_p', 0) * params.get('put_q', 0)))
+        if capital_base < 0.01:
+            capital_base = params.get('asset_p', 0) * params.get('asset_q', 0)
+        
         show_absolute_return = capital_base <= 0.01
         y_axis_values = pnl_values if show_absolute_return else pnl_values / capital_base
-        self.ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('R$ %.0f') if show_absolute_return else mtick.PercentFormatter(xmax=1.0, decimals=1))
-        self.ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
-        self.ax.xaxis.set_major_locator(mtick.MultipleLocator(0.02))
-        line, = self.ax.plot(pc_range, y_axis_values, linewidth=1.5)
-        self.ax.axhline(0, color='black', ls='--', lw=0.9)
-        self.ax.axvline(0, color='gray', ls=':', lw=0.9)
-        if params['asset_p'] != 0: self.ax.axvline((params['strike'] - params['asset_p']) / params['asset_p'], color='red', ls=':', lw=0.9)
-        asset_name = self.selected_option_pair.get('ativo_principal') if self.selected_option_pair else None
+        
+        ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('R$ %.0f') if show_absolute_return else mtick.PercentFormatter(xmax=1.0, decimals=1))
+        ax.xaxis.set_major_locator(mtick.MultipleLocator(0.05))
+
+        line, = ax.plot(pc_range, y_axis_values, linewidth=1.5)
+        ax.axvline(0, color='gray', ls=':', lw=0.9)
+        
+        if params.get('asset_p', 0) != 0 and params.get('strike') is not None:
+             ax.axvline((params['strike'] - params['asset_p']) / params['asset_p'], color='red', ls=':', lw=0.9)
+
         if asset_name:
             prices = mt5_get_all_prices_optimized([asset_name])
             live_price = prices.get(f'{asset_name}_ask')
-            if live_price and params['asset_p'] != 0:
+            if live_price and params.get('asset_p', 0) != 0 and params.get('strike') is not None:
                 x_pos = (live_price - params['asset_p']) / params['asset_p']
-                self.ax.axvline(x=x_pos, color='green', ls=':', lw=0.9)
-                pnl_at_live_price = ((live_price - params['asset_p']) * params['asset_q']) + ((params['call_p'] - max(0, live_price - params['strike'])) * params['call_q']) + ((max(0, params['strike'] - live_price) - params['put_p']) * params['put_q'])
-                y_at_live_price = pnl_at_live_price if show_absolute_return else pnl_at_live_price / capital_base
-                self.ax.plot(x_pos, y_at_live_price, 'o', ms=5, color='green')
+                ax.axvline(x=x_pos, color='green', ls=':', lw=0.9)
+                
+                pnl_at_live_price = ((live_price - params.get('asset_p', 0)) * params.get('asset_q', 0)) + \
+                                    ((params.get('call_p', 0) - max(0, live_price - params.get('strike', 0))) * params.get('call_q', 0)) + \
+                                    ((max(0, params.get('strike', 0) - live_price) - params.get('put_p', 0)) * params.get('put_q', 0))
+                
+                y_at_live_price = pnl_at_live_price if show_absolute_return else (pnl_at_live_price / capital_base if capital_base > 0 else 0)
+                ax.plot(x_pos, y_at_live_price, 'o', ms=5, color='green')
+                
                 price_str = f"{live_price:.2f}"
                 financial_str = f"{pnl_at_live_price:,.0f}".replace(",", ".")
                 if show_absolute_return:
                     label_text = f"{price_str} | {financial_str}"
                 else:
                     pnl_percent_at_live_price = (pnl_at_live_price / capital_base) * 100 if capital_base > 0 else 0
-                    self.last_graph_pnl_pct = pnl_percent_at_live_price
+                    setattr(self, pnl_pct_attr_name, pnl_percent_at_live_price)
                     percent_str = f"{pnl_percent_at_live_price:.1f}".replace('.', ',') + '%'
                     label_text = f"{price_str} | {percent_str} | {financial_str}"
-                self.ax.annotate(label_text, (x_pos, y_at_live_price), textcoords="offset points", xytext=(8, -5), ha='left', va='center', fontsize=graph_font_size, bbox=dict(boxstyle="round,pad=0.3", fc="yellow", ec="black", lw=0.5, alpha=0.7))
+                
+                ax.annotate(label_text, (x_pos, y_at_live_price), textcoords="offset points", xytext=(8, -5), ha='left', va='center', fontsize=graph_font_size, bbox=dict(boxstyle="round,pad=0.3", fc="yellow", ec="black", lw=0.5, alpha=0.7))
+
         for x_pc in np.arange(-0.30, 0.301, 0.04):
             idx = (np.abs(pc_range - x_pc)).argmin()
             x_plot, y_plot = pc_range[idx], y_axis_values[idx]
             pnl_absolute = pnl_values[idx]
-            self.ax.plot(x_plot, y_plot, 'o', ms=5, color=line.get_color())
+            ax.plot(x_plot, y_plot, 'o', ms=5, color=line.get_color())
             financial_str = f"{pnl_absolute:,.0f}".replace(",", ".")
             if show_absolute_return:
                 label_text = financial_str
             else:
                 percent_str = f"{(pnl_absolute / capital_base) * 100:.2f}%" if capital_base > 0 else "0.00%"
                 label_text = f"{percent_str}\n{financial_str}"
-            self.ax.annotate(label_text, (x_plot, y_plot), textcoords="offset points", xytext=(0, 7), ha='center', va='bottom', fontsize=graph_font_size, multialignment='center')
-        self.ax.grid(True, ls=':', alpha=0.7)
-        self.fig.tight_layout(pad=0.5)
-        self.canvas.draw()
-    
+            ax.annotate(label_text, (x_plot, y_plot), textcoords="offset points", xytext=(0, 7), ha='center', va='bottom', fontsize=graph_font_size, multialignment='center')
+    # --- FIM MODIFICAÇÃO GRÁFICO ---
+
     def _update_summary_widgets(self, params):
         if not self.selected_option_pair or not self.mt5_prices:
             self.update_details_text_initial(); return
@@ -1148,12 +1240,23 @@ class OptionStrategyApp:
                 if abs(item['strike'] - closest_item['strike']) < 1e-6: self.tree.item(item['id'], tags=('closest_strike',))
 
     def clear_all_displays(self):
-        self.tree.delete(*self.tree.get_children()); self.clear_plot(); self.update_details_text_initial()
+        self.tree.delete(*self.tree.get_children()); self.clear_plots(); self.update_details_text_initial()
         [entry["var"].set("") for entry in self.price_entries.values()]; self.last_filtered_df_for_treeview = pd.DataFrame(); self.mt5_prices = {}; self.tree_item_map.clear()
 
-    def clear_plot(self):
-        self.ax.clear(); self.ax.grid(True, linestyle=':', alpha=0.7); self.ax.axhline(0, color='black', linestyle='--', linewidth=1); self.fig.tight_layout(pad=0.5);
-        setattr(self, 'last_graph_pnl_pct', 0.0)
+    def clear_plots(self):
+        self.ax_left.clear()
+        self.ax_right.clear()
+        for ax in [self.ax_left, self.ax_right]:
+            ax.grid(True, linestyle=':', alpha=0.7)
+            ax.axhline(0, color='black', linestyle='--', linewidth=1)
+        self.ax_left.set_title("Simulação Montagem/Rolagem", fontsize=9)
+        self.ax_right.set_title(f"Posição Atual ({self.current_position_key})", fontsize=9)
+        self.last_graph_pnl_pct_sim = 0.0
+        self.last_graph_pnl_pct_pos = 0.0
+        try:
+            self.fig.tight_layout(pad=0.5)
+        except Exception:
+            pass
         self.canvas.draw()
 
     def _update_text_widget(self, widget, content):
