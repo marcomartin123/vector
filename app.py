@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import MetaTrader5 as mt5
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.ticker as mtick
 from datetime import datetime
 import time
@@ -449,7 +449,16 @@ class OptionStrategyApp:
         self.fig, (self.ax_left, self.ax_right) = plt.subplots(1, 2, sharey=True, figsize=(10, 4),gridspec_kw={'width_ratios': [1, 1]})
         # --- FIM MODIFICAÇÃO GRÁFICO ---
         self.canvas = FigureCanvasTkAgg(self.fig, master=graph_frame)
-        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        self.canvas.draw() # Adicionado para garantir que o canvas seja desenhado
+        
+        # --- INÍCIO DA MODIFICAÇÃO: Adicionar NavigationToolbar2Tk ---
+        toolbar_frame = ttk.Frame(graph_frame) # Frame para a toolbar
+        toolbar_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=(2,0))
+        toolbar = NavigationToolbar2Tk(self.canvas, toolbar_frame)
+        toolbar.update()
+        # --- FIM DA MODIFICAÇÃO ---
+        
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True) # Ajustado para side=tk.TOP
         self.right_vertical_pane.add(graph_frame, weight=2)
         
         bottom_text_frame = ttk.Frame(self.right_vertical_pane)
@@ -700,10 +709,22 @@ class OptionStrategyApp:
             ax.grid(True, linestyle=':', alpha=0.7)
             ax.axhline(0, color='black', linestyle='--', linewidth=1)
             ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
-            ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
+            # A formatação do eixo Y será tratada individualmente abaixo
 
         self.ax_left.set_title("Simulação Montagem/Rolagem", fontsize=9)
         self.ax_right.set_title(f"Posição Atual ({self.current_position_key})", fontsize=9)
+
+        # --- INÍCIO DA MODIFICAÇÃO: Mover rótulos do eixo Y ---
+        # Ocultar rótulos e ticks do eixo Y do gráfico esquerdo
+        self.ax_left.set_yticklabels([])
+        self.ax_left.tick_params(axis='y', which='both', left=False, labelleft=False, right=False, labelright=False)
+
+        # Configurar eixo Y do gráfico direito para mostrar rótulos à sua esquerda
+        self.ax_right.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1)) # Aplicar formatador SÓ AQUI
+        self.ax_right.tick_params(axis='y', which='both', left=True, labelleft=True, right=False, labelright=False)
+        self.ax_right.yaxis.set_ticks_position('left')
+        self.ax_right.yaxis.set_label_position('left')
+        # --- FIM DA MODIFICAÇÃO ---
         
         self._plot_simulation_payout()
         self._plot_position_payout()
@@ -1135,18 +1156,23 @@ class OptionStrategyApp:
                 
                 ax.annotate(label_text, (x_pos, y_at_live_price), textcoords="offset points", xytext=(8, -5), ha='left', va='center', fontsize=graph_font_size, bbox=dict(boxstyle="round,pad=0.3", fc="yellow", ec="black", lw=0.5, alpha=0.7))
 
-        for x_pc in np.arange(-0.30, 0.301, 0.04):
-            idx = (np.abs(pc_range - x_pc)).argmin()
-            x_plot, y_plot = pc_range[idx], y_axis_values[idx]
-            pnl_absolute = pnl_values[idx]
-            ax.plot(x_plot, y_plot, 'o', ms=5, color=line.get_color())
-            financial_str = f"{pnl_absolute:,.0f}".replace(",", ".")
-            if show_absolute_return:
-                label_text = financial_str
-            else:
-                percent_str = f"{(pnl_absolute / capital_base) * 100:.2f}%" if capital_base > 0 else "0.00%"
-                label_text = f"{percent_str}\n{financial_str}"
-            ax.annotate(label_text, (x_plot, y_plot), textcoords="offset points", xytext=(0, 7), ha='center', va='bottom', fontsize=graph_font_size, multialignment='center')
+        # --- INÍCIO DA MODIFICAÇÃO: Não mostrar pontos/rótulos para gráficos de Posição (M, R, T) ---
+        is_any_position_graph = title.startswith("Posição Atual") # Verifica se o título começa com "Posição Atual"
+        
+        if not is_any_position_graph:
+            for x_pc in np.arange(-0.30, 0.301, 0.04):
+                idx = (np.abs(pc_range - x_pc)).argmin()
+                x_plot, y_plot = pc_range[idx], y_axis_values[idx]
+                pnl_absolute = pnl_values[idx]
+                ax.plot(x_plot, y_plot, 'o', ms=5, color=line.get_color())
+                financial_str = f"{pnl_absolute:,.0f}".replace(",", ".")
+                if show_absolute_return:
+                    label_text = financial_str
+                else:
+                    percent_str = f"{(pnl_absolute / capital_base) * 100:.2f}%" if capital_base > 0 else "0.00%"
+                    label_text = f"{percent_str}\n{financial_str}"
+                ax.annotate(label_text, (x_plot, y_plot), textcoords="offset points", xytext=(0, 7), ha='center', va='bottom', fontsize=graph_font_size, multialignment='center')
+        # --- FIM DA MODIFICAÇÃO ---
     # --- FIM MODIFICAÇÃO GRÁFICO ---
 
     def _update_summary_widgets(self, params):
@@ -1446,6 +1472,10 @@ class OptionStrategyApp:
             process_sync = subprocess.run([sys.executable, 'sync.py'], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace', env=child_env)
             if process_sync.returncode == 0:
                 self.root.after_idle(progress_popup_instance.update_progress, "sync", "Concluído!", 100)
+                # --- INÍCIO DA MODIFICAÇÃO: Recarregar dados e atualizar TreeView ---
+                self.root.after_idle(self.load_data)
+                self.root.after_idle(self.on_asset_selected)
+                # --- FIM DA MODIFICAÇÃO ---
             else:
                 self.root.after_idle(progress_popup_instance.update_progress, "sync", "Erro!", 0)
                 error_message_sync = f"Erro ao executar sync.py:\nReturn Code: {process_sync.returncode}\nOutput:\n{process_sync.stdout}\nError:\n{process_sync.stderr}"
@@ -1565,7 +1595,7 @@ class SyncProgressPopup:
         self.popup.title("Sincronizando Scripts...")
         self.popup.transient(master)
         self.popup.grab_set()
-        self.popup.geometry("300x150")
+        self.popup.geometry("450x150") # Largura aumentada de 300 para 450
         self.popup.protocol("WM_DELETE_WINDOW", lambda: None)
 
 
@@ -1630,7 +1660,7 @@ class SIProgressPopup:
         self.popup.title("Processando SI...")
         self.popup.transient(master)
         self.popup.grab_set()
-        self.popup.geometry("350x210") # Aumentado para 3 tarefas
+        self.popup.geometry("500x210") # Largura aumentada de 350 para 500
         self.popup.protocol("WM_DELETE_WINDOW", lambda: None)
 
         pad_options = {'padx': 10, 'pady': 5}
