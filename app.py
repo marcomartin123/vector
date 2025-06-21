@@ -1122,7 +1122,12 @@ class OptionStrategyApp:
         y_axis_values = pnl_values if show_absolute_return else pnl_values / capital_base
         
         ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('R$ %.0f') if show_absolute_return else mtick.PercentFormatter(xmax=1.0, decimals=1))
+        
+        # Define o range do eixo X de -30% a +30% e ticks a cada 5%
+        ax.set_xlim(-0.30, 0.30)
         ax.xaxis.set_major_locator(mtick.MultipleLocator(0.05))
+        ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
+
 
         line, = ax.plot(pc_range, y_axis_values, linewidth=1.5)
         ax.axvline(0, color='gray', ls=':', lw=0.9)
@@ -1135,44 +1140,62 @@ class OptionStrategyApp:
             live_price = prices.get(f'{asset_name}_ask')
             if live_price and params.get('asset_p', 0) != 0 and params.get('strike') is not None:
                 x_pos = (live_price - params['asset_p']) / params['asset_p']
-                ax.axvline(x=x_pos, color='green', ls=':', lw=0.9)
+                # Garante que a linha vertical do preço ao vivo não ultrapasse os limites do gráfico
+                if -0.30 <= x_pos <= 0.30:
+                    ax.axvline(x=x_pos, color='green', ls=':', lw=0.9)
                 
                 pnl_at_live_price = ((live_price - params.get('asset_p', 0)) * params.get('asset_q', 0)) + \
                                     ((params.get('call_p', 0) - max(0, live_price - params.get('strike', 0))) * params.get('call_q', 0)) + \
                                     ((max(0, params.get('strike', 0) - live_price) - params.get('put_p', 0)) * params.get('put_q', 0))
                 
                 y_at_live_price = pnl_at_live_price if show_absolute_return else (pnl_at_live_price / capital_base if capital_base > 0 else 0)
-                ax.plot(x_pos, y_at_live_price, 'o', ms=5, color='green')
                 
-                price_str = f"{live_price:.2f}"
-                financial_str = f"{pnl_at_live_price:,.0f}".replace(",", ".")
-                if show_absolute_return:
-                    label_text = f"{price_str} | {financial_str}"
-                else:
-                    pnl_percent_at_live_price = (pnl_at_live_price / capital_base) * 100 if capital_base > 0 else 0
-                    setattr(self, pnl_pct_attr_name, pnl_percent_at_live_price)
-                    percent_str = f"{pnl_percent_at_live_price:.1f}".replace('.', ',') + '%'
-                    label_text = f"{price_str} | {percent_str} | {financial_str}"
-                
-                ax.annotate(label_text, (x_pos, y_at_live_price), textcoords="offset points", xytext=(8, -5), ha='left', va='center', fontsize=graph_font_size, bbox=dict(boxstyle="round,pad=0.3", fc="yellow", ec="black", lw=0.5, alpha=0.7))
+                if -0.30 <= x_pos <= 0.30: # Só plota o ponto e anotação se estiver dentro do range visível
+                    ax.plot(x_pos, y_at_live_price, 'o', ms=5, color='green')
+                    
+                    price_str = f"{live_price:.2f}"
+                    financial_str = f"{pnl_at_live_price:,.0f}".replace(",", ".")
+                    if show_absolute_return:
+                        label_text = f"{price_str} | {financial_str}"
+                    else:
+                        pnl_percent_at_live_price = (pnl_at_live_price / capital_base) * 100 if capital_base > 0 else 0
+                        setattr(self, pnl_pct_attr_name, pnl_percent_at_live_price)
+                        percent_str = f"{pnl_percent_at_live_price:.1f}".replace('.', ',') + '%'
+                        label_text = f"{price_str} | {percent_str} | {financial_str}"
+                    
+                    ax.annotate(label_text, (x_pos, y_at_live_price), textcoords="offset points", xytext=(8, -5), ha='left', va='center', fontsize=graph_font_size, bbox=dict(boxstyle="round,pad=0.3", fc="yellow", ec="black", lw=0.5, alpha=0.7))
 
-        # --- INÍCIO DA MODIFICAÇÃO: Não mostrar pontos/rótulos para gráficos de Posição (M, R, T) ---
-        is_any_position_graph = title.startswith("Posição Atual") # Verifica se o título começa com "Posição Atual"
-        
-        if not is_any_position_graph:
-            for x_pc in np.arange(-0.30, 0.301, 0.04):
-                idx = (np.abs(pc_range - x_pc)).argmin()
-                x_plot, y_plot = pc_range[idx], y_axis_values[idx]
-                pnl_absolute = pnl_values[idx]
-                ax.plot(x_plot, y_plot, 'o', ms=5, color=line.get_color())
-                financial_str = f"{pnl_absolute:,.0f}".replace(",", ".")
-                if show_absolute_return:
-                    label_text = financial_str
-                else:
-                    percent_str = f"{(pnl_absolute / capital_base) * 100:.2f}%" if capital_base > 0 else "0.00%"
-                    label_text = f"{percent_str}\n{financial_str}"
-                ax.annotate(label_text, (x_plot, y_plot), textcoords="offset points", xytext=(0, 7), ha='center', va='bottom', fontsize=graph_font_size, multialignment='center')
-        # --- FIM DA MODIFICAÇÃO ---
+        # Adiciona anotações a cada 5% no eixo X
+        for x_pc_annotation in np.arange(-0.30, 0.301, 0.05):
+            # Encontra o índice mais próximo no pc_range para obter o valor de y (pnl)
+            # pc_range é o array original usado para plotar pnl_values
+            idx = (np.abs(pc_range - x_pc_annotation)).argmin()
+            y_plot_annotation = y_axis_values[idx] # y_axis_values já está em % ou R$ conforme show_absolute_return
+            pnl_absolute_annotation = pnl_values[idx] # pnl_values está sempre em R$
+
+            # Plota um pequeno círculo no ponto de interesse
+            ax.plot(x_pc_annotation, y_plot_annotation, 'o', ms=4, color=line.get_color(), alpha=0.7)
+
+            # Prepara o texto da anotação
+            financial_str_annotation = f"{pnl_absolute_annotation:,.0f}".replace(",", ".") # Sempre mostrar financeiro
+
+            # Se y_axis_values estiver em %, formata esse % também
+            if not show_absolute_return and capital_base > 0:
+                y_percent_str_annotation = f"{(pnl_absolute_annotation / capital_base) * 100:.1f}%"
+                label_text_annotation = f"{y_percent_str_annotation}\n{financial_str_annotation}" # Removido parênteses
+            else: # Se y_axis_values estiver em R$ (show_absolute_return é True ou capital_base é 0)
+                label_text_annotation = f"{financial_str_annotation}"
+
+            # Adiciona a anotação
+            ax.annotate(label_text_annotation,
+                        (x_pc_annotation, y_plot_annotation),
+                        textcoords="offset points",
+                        xytext=(0, 7 if pnl_absolute_annotation >=0 else -17), # Ajusta a posição vertical da anotação
+                        ha='center',
+                        va='bottom' if pnl_absolute_annotation >=0 else 'top',
+                        fontsize=graph_font_size -1, # Fonte um pouco menor para não poluir muito
+                        multialignment='center',
+                        bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", lw=0, alpha=0.0)) # Background transparente (alpha=0.0)
     # --- FIM MODIFICAÇÃO GRÁFICO ---
 
     def _update_summary_widgets(self, params):
