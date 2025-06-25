@@ -22,8 +22,8 @@ SETTINGS_FILE = "app_settings.json"
 POSITION_FILES = {'M': 'position_m.json', 'R': 'position_r.json'}
 FISCAL_M_FILE = 'fiscal_m.json'
 FISCAL_R_FILE = 'fiscal_r.json'
-TARGET_FONT = ('MS Reference Sans Serif', 10)
-TARGET_FONT_BOLD = ('MS Reference Sans Serif', 10,'bold')
+TARGET_FONT = ('MS Reference Sans Serif', 8)
+TARGET_FONT_BOLD = ('MS Reference Sans Serif', 8,'bold')
 EVENT_DEBOUNCE_MS = 300
 
 def mt5_connect():
@@ -180,7 +180,7 @@ class OptionStrategyApp:
         style.configure("NoBorder.Treeview.Heading", font=TARGET_FONT)
         
         self.root.option_add("*TCombobox*Listbox*Font", TARGET_FONT)
-        plt.rcParams.update({'font.size': 9, 'axes.titlesize': 9,'font.family': 'MS Reference Sans Serif'})
+        plt.rcParams.update({'font.size': 9, 'axes.titlesize': 8,'font.family': 'MS Reference Sans Serif'})
 
     def load_data(self):
         try:
@@ -461,11 +461,47 @@ class OptionStrategyApp:
         # Frame da Montagem (primeiro painel)
         montagem_frame = ttk.LabelFrame(self.bottom_paned_window, text="Montagem")
         self.bottom_paned_window.add(montagem_frame, weight=1) # Peso 1
+
+        # --- Nova estrutura para Montagem ---
+        montagem_frame.columnconfigure(0, weight=1) # Permitir que a treeview expanda
+
+        # Parte Superior (Textos)
+        self.montagem_tickers_label = ttk.Label(montagem_frame, text="", font=TARGET_FONT_BOLD)
+        self.montagem_tickers_label.grid(row=0, column=0, sticky="ew", padx=7, pady=(5, 2))
         
-        self.summary_text = tk.Text(montagem_frame, wrap=tk.WORD, height=10, font=TARGET_FONT, state=tk.DISABLED, borderwidth=0, relief="flat")
-        self.summary_text.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
-        self.summary_text.tag_config("positivo", foreground="blue", font=TARGET_FONT)
-        self.summary_text.tag_config("negativo", foreground="red", font=TARGET_FONT)
+        self.montagem_vencimento_label = ttk.Label(montagem_frame, text="", font=TARGET_FONT)
+        self.montagem_vencimento_label.grid(row=1, column=0, sticky="ew", padx=7, pady=(2, 5))
+
+        # Parte Intermediária (Treeview)
+        montagem_tree_frame = ttk.Frame(montagem_frame) # Frame para conter a treeview e scrollbar
+        montagem_tree_frame.grid(row=2, column=0, sticky="nsew", padx=5, pady=(0,5))
+        montagem_tree_frame.rowconfigure(0, weight=1)
+        montagem_tree_frame.columnconfigure(0, weight=1)
+        
+        montagem_cols = ('key', 'value')
+        self.montagem_details_tree = ttk.Treeview(montagem_tree_frame, columns=montagem_cols, show='headings', style="NoBorder.Treeview", selectmode='none', height=7) # Definir altura inicial
+        self.montagem_details_tree.grid(row=0, column=0, sticky="nsew")
+        
+        self.montagem_details_tree.heading('key', text='Info')
+        self.montagem_details_tree.heading('value', text='Valor')
+        self.montagem_details_tree.column('key', width=100, anchor=tk.W, stretch=tk.NO) # Coluna da chave não estica inicialmente
+        self.montagem_details_tree.column('value', width=150, anchor=tk.W, stretch=tk.YES) # Coluna do valor estica
+
+        montagem_frame.rowconfigure(2, weight=1) # Permitir que a treeview expanda verticalmente
+
+        # Parte Inferior (Textos D+1, D+2)
+        self.montagem_settlement_frame = ttk.Frame(montagem_frame)
+        self.montagem_settlement_frame.grid(row=3, column=0, sticky="ew", padx=7, pady=(5, 5))
+        self.montagem_settlement_frame.columnconfigure(1, weight=1) # Para o valor expandir se necessário
+
+        ttk.Label(self.montagem_settlement_frame, text="D+1:").grid(row=0, column=0, sticky=tk.W)
+        self.montagem_d1_value_label = ttk.Label(self.montagem_settlement_frame, text="R$ 0.00", font=TARGET_FONT)
+        self.montagem_d1_value_label.grid(row=0, column=1, sticky=tk.EW, padx=(5,0))
+        
+        ttk.Label(self.montagem_settlement_frame, text="D+2:").grid(row=1, column=0, sticky=tk.W, pady=(2,0))
+        self.montagem_d2_value_label = ttk.Label(self.montagem_settlement_frame, text="R$ 0.00", font=TARGET_FONT)
+        self.montagem_d2_value_label.grid(row=1, column=1, sticky=tk.EW, padx=(5,0), pady=(2,0))
+        # --- Fim da Nova estrutura para Montagem ---
 
         # Container para os outros dois painéis
         right_sub_pane = ttk.PanedWindow(self.bottom_paned_window, orient=tk.HORIZONTAL)
@@ -490,14 +526,19 @@ class OptionStrategyApp:
         self.rolagem_trades_tree.column("financial", width=110, anchor=tk.E)
         self.rolagem_trades_tree.tag_configure('positivo', foreground='blue')
         self.rolagem_trades_tree.tag_configure('negativo', foreground='red')
+        
         self.settlement_frame = ttk.Frame(rolagem_frame)
         self.settlement_frame.grid(row=2, column=0, sticky="ew", padx=7, pady=(5, 2))
-        ttk.Label(self.settlement_frame, text="D+1:").pack(side=tk.LEFT)
+        self.settlement_frame.columnconfigure(1, weight=1) # Para o valor expandir
+
+        ttk.Label(self.settlement_frame, text="D+1:").grid(row=0, column=0, sticky=tk.W)
         self.d1_value_label = ttk.Label(self.settlement_frame, text="R$ 0.00", font=TARGET_FONT)
-        self.d1_value_label.pack(side=tk.LEFT, padx=(5, 20))
-        ttk.Label(self.settlement_frame, text="D+2:").pack(side=tk.LEFT)
+        self.d1_value_label.grid(row=0, column=1, sticky=tk.EW, padx=(5,0))
+        
+        ttk.Label(self.settlement_frame, text="D+2:").grid(row=1, column=0, sticky=tk.W, pady=(2,0))
         self.d2_value_label = ttk.Label(self.settlement_frame, text="R$ 0.00", font=TARGET_FONT)
-        self.d2_value_label.pack(side=tk.LEFT, padx=5)
+        self.d2_value_label.grid(row=1, column=1, sticky=tk.EW, padx=(5,0), pady=(2,0))
+        
         self.rolagem_footer_label = ttk.Label(rolagem_frame, text="", font=TARGET_FONT)
         self.rolagem_footer_label.grid(row=3, column=0, sticky="ew", padx=7, pady=(2, 5))
         self.rollover_context_menu = tk.Menu(rolagem_frame, tearoff=0)
@@ -1045,7 +1086,7 @@ class OptionStrategyApp:
         alvo_custo = abs(custo_montagem) + target_profit
         
         footer_text = f"Alvo+Custo: R$ {alvo_custo:,.2f}"
-        self.rolagem_footer_label.config(text=footer_text, foreground="blue")
+        self.rolagem_footer_label.config(text=footer_text, foreground="black") # Alterado para preto
 
     def populate_assembly_from_current_position(self):
         if not self.current_position:
@@ -1218,42 +1259,90 @@ class OptionStrategyApp:
     def _update_summary_widgets(self, params):
         if not self.selected_option_pair or not self.mt5_prices:
             self.update_details_text_initial(); return
+        
         pair, prices = self.selected_option_pair, self.mt5_prices
         q_asset, q_call, q_put = params['asset_q'], params['call_q'], params['put_q']
-        p_asset_ask, p_call_bid, p_put_ask = prices.get('asset_ask', 0), prices.get('call_bid', 0), prices.get('put_ask', 0)
-        p_asset_bid, p_call_ask, p_put_bid = prices.get('asset_bid', 0), prices.get('call_ask', 0), prices.get('put_bid', 0)
-        widget = self.summary_text
-        widget.config(state=tk.NORMAL)
-        widget.delete(1.0, tk.END)
-        l1 = f" {pair['ativo_principal']} | {pair['ticker_call']} | {pair['ticker_put']}\n"
+        
+        p_asset_ask = prices.get('asset_ask', 0) or 0
+        p_call_bid = prices.get('call_bid', 0) or 0
+        p_put_ask = prices.get('put_ask', 0) or 0
+        p_asset_bid = prices.get('asset_bid', 0) or 0
+        p_call_ask = prices.get('call_ask', 0) or 0
+        p_put_bid = prices.get('put_bid', 0) or 0
+
+        # Atualizar Labels Superiores
+        ticker_text = f"{pair['ativo_principal']} | {pair['ticker_call']} | {pair['ticker_put']}"
+        self.montagem_tickers_label.config(text=ticker_text)
+
         try:
             exp_date, now = datetime.strptime(pair.get('expiracao', ''), '%d/%m/%Y'), datetime.now()
-            cal_days, bus_days = max(0, (exp_date.date() - now.date()).days), np.busday_count(now.date(), exp_date.date()) if max(0, (exp_date.date() - now.date()).days) > 0 else 0
-        except: cal_days, bus_days = 'N/A', 'N/A'
+            cal_days = max(0, (exp_date.date() - now.date()).days)
+            bus_days = np.busday_count(now.date(), exp_date.date()) if cal_days > 0 else 0
+            venc_text = f"Vencimento: {pair['expiracao']} ({cal_days}dc/{bus_days}dú)"
+        except: 
+            cal_days, bus_days = 'N/A', 'N/A'
+            venc_text = f"Vencimento: {pair.get('expiracao', 'N/A')} (N/Adc/N/Adú)"
+        self.montagem_vencimento_label.config(text=venc_text)
+
+        # Limpar e Preencher Treeview
+        self.montagem_details_tree.delete(*self.montagem_details_tree.get_children())
+
         total_q = q_asset + q_call + q_put
-        pct_asset, pct_call, pct_put = (q_asset/total_q*100, q_call/total_q*100, q_put/total_q*100) if total_q > 0 else (0,0,0)
+        pct_asset, pct_call, pct_put = ((q_asset/total_q*100), (q_call/total_q*100), (q_put/total_q*100)) if total_q > 0 else (0,0,0)
+        
         pnl_flat_part = (pair['strike'] - p_asset_ask + p_call_bid - p_put_ask)
-        capital_base = abs(p_asset_ask - p_call_bid + p_put_ask)
-        taxa = (pnl_flat_part / capital_base) * 100 if capital_base > 0 else 0
+        capital_base_taxa = abs(p_asset_ask - p_call_bid + p_put_ask) # Usar abs para evitar divisão por zero ou negativo
+        taxa = (pnl_flat_part / capital_base_taxa) * 100 if capital_base_taxa > 0 else 0
+        
         S0, K, Pc, Pp = params['asset_p'], params['strike'], params['call_p'], params['put_p']
-        be1_val = (S0*q_asset - Pc*q_call - K*q_call + Pp*q_put) / (q_asset - q_call) if (q_asset - q_call) != 0 else float('nan')
-        be2_val = (S0*q_asset - Pc*q_call - K*q_put + Pp*q_put) / (q_asset - q_put) if (q_asset - q_put) != 0 else float('nan')
+        
+        # Break Even calculations
+        be1_val, be2_val = float('nan'), float('nan')
+        if (q_asset - q_call) != 0:
+            be1_val = (S0*q_asset - Pc*q_call - K*q_call + Pp*q_put) / (q_asset - q_call)
+        if (q_asset - q_put) != 0: # Assuming typical strategy structure for second BE
+            be2_val = (S0*q_asset - Pc*q_call - K*q_put + Pp*q_put) / (q_asset - q_put) 
+
         be1_pct = (be1_val / S0 - 1) * 100 if S0 > 0 and not np.isnan(be1_val) else float('nan')
         be2_pct = (be2_val / S0 - 1) * 100 if S0 > 0 and not np.isnan(be2_val) else float('nan')
+        be_str = f"{be1_pct:+.1f}%"
+        if not np.isnan(be2_pct) and abs(be1_pct - be2_pct) > 0.01 : # Adicionar segundo BE se for diferente
+             be_str += f" | {be2_pct:+.1f}%"
+
         spread_in = -p_asset_ask + p_call_bid - p_put_ask if all([p_asset_ask, p_call_bid, p_put_ask]) else 0
         spread_out = p_asset_bid - p_call_ask + p_put_bid if all([p_asset_bid, p_call_ask, p_put_bid]) else 0
         custo = -(q_asset * p_asset_ask) + (q_call * p_call_bid) - (q_put * p_put_ask) if all([p_asset_ask, p_call_bid, p_put_ask]) else 0
+
+        tree_data = [
+            ("Strike", f"{pair['strike']:.2f}"),
+            ("Peso", f"{pct_asset:.0f}% | {pct_call:.0f}% | {pct_put:.0f}%"),
+            ("Taxa", f"{taxa:.2f}%"),
+            ("B.Even", be_str),
+            ("Spread In", f"{spread_in:,.2f}", "positivo" if spread_in >= 0 else "negativo"),
+            ("Spread Out", f"{spread_out:,.2f}", "positivo" if spread_out >= 0 else "negativo"),
+            ("Custo $", f"R$ {custo:,.2f}", "positivo" if custo >= 0 else "negativo")
+        ]
+
+        for item_data in tree_data:
+            key, value = item_data[0], item_data[1]
+            tag = ()
+            if len(item_data) > 2: # Se tem cor especificada
+                 tag = (item_data[2],) # Tags precisam ser tuplas
+            self.montagem_details_tree.insert('', 'end', values=(key, value), tags=tag)
+        
+        self.montagem_details_tree.tag_configure("positivo", foreground="blue")
+        self.montagem_details_tree.tag_configure("negativo", foreground="red")
+
+
+        # Atualizar Labels Inferiores (D+1, D+2)
         d1_flow = (q_call * p_call_bid) - (q_put * p_put_ask) if all([p_call_bid, p_put_ask]) else 0
         cumulative_d2_flow = d1_flow - (q_asset * p_asset_ask if p_asset_ask > 0 else 0)
-        l2_venc = f"Vencimento: {pair['expiracao']} ({cal_days}dc/{bus_days}dú)"
-        be_str = f"{be1_pct:+.1f}%" + (f" | {be2_pct:+.1f}%" if not np.isnan(be2_pct) else "")
-        widget.insert(tk.END, f"{l1}\n{l2_venc}\nStrike: {pair['strike']:.2f}\nPeso: {pct_asset:.0f}% | {pct_call:.0f}% | {pct_put:.0f}%\nTaxa: {taxa:.2f}%\nB.Even: {be_str}\n")
-        widget.insert(tk.END, "Spread In: "); widget.insert(tk.END, f"{spread_in:,.2f}\n", "positivo" if spread_in >= 0 else "negativo")
-        widget.insert(tk.END, "Spread Out: "); widget.insert(tk.END, f"{spread_out:,.2f}\n", "positivo" if spread_out >= 0 else "negativo")
-        widget.insert(tk.END, "Custo $: "); widget.insert(tk.END, f"R$ {custo:,.2f}\n\n", "positivo" if custo >= 0 else "negativo")
-        widget.insert(tk.END, "L D+1: "); widget.insert(tk.END, f"R$ {d1_flow:,.2f}\n", "positivo" if d1_flow >= 0 else "negativo")
-        widget.insert(tk.END, "L D+2: "); widget.insert(tk.END, f"R$ {cumulative_d2_flow:,.2f}\n", "positivo" if cumulative_d2_flow >= 0 else "negativo")
-        widget.config(state=tk.DISABLED)
+
+        d1_color = "blue" if d1_flow >= 0 else "red"
+        self.montagem_d1_value_label.config(text=f"R$ {d1_flow:,.2f}", foreground=d1_color)
+        
+        d2_color = "blue" if cumulative_d2_flow >= 0 else "red"
+        self.montagem_d2_value_label.config(text=f"R$ {cumulative_d2_flow:,.2f}", foreground=d2_color)
 
     def auto_load_initial_asset(self):
         if self.asset_combo.get(): self.on_asset_selected()
@@ -1329,16 +1418,27 @@ class OptionStrategyApp:
         widget.config(state=tk.NORMAL); widget.delete(1.0, tk.END); widget.insert(tk.END, content); widget.config(state=tk.DISABLED)
 
     def update_details_text_initial(self):
-        # Limpa os novos widgets de rolagem
+        # Limpa os widgets de rolagem
         if hasattr(self, 'rolagem_header_label'):
             self.rolagem_header_label.config(text="Monte uma posição e selecione um novo par para simular.")
-            self.rolagem_trades_tree.delete(*self.rolagem_trades_tree.get_children())
+            if hasattr(self, 'rolagem_trades_tree'): # Verificar se existe antes de limpar
+                self.rolagem_trades_tree.delete(*self.rolagem_trades_tree.get_children())
             self.d1_value_label.config(text="")
             self.d2_value_label.config(text="")
             self.rolagem_footer_label.config(text="")
         
-        # Limpa o widget de sumário
-        self._update_text_widget(self.summary_text, "Selecione um par de opções e preencha os dados da operação para simular.")
+        # Limpa os novos widgets de montagem
+        if hasattr(self, 'montagem_tickers_label'):
+            self.montagem_tickers_label.config(text="Selecione um par de opções...")
+            self.montagem_vencimento_label.config(text="")
+            if hasattr(self, 'montagem_details_tree'): # Verificar se existe antes de limpar
+                 self.montagem_details_tree.delete(*self.montagem_details_tree.get_children())
+            self.montagem_d1_value_label.config(text="")
+            self.montagem_d2_value_label.config(text="")
+            # Adicionar uma mensagem inicial na treeview de montagem, se estiver vazia
+            if hasattr(self, 'montagem_details_tree') and not self.montagem_details_tree.get_children():
+                self.montagem_details_tree.insert('', 'end', values=(">", "Preencha os dados da operação para simular."))
+
 
     def show_rollover_context_menu(self, event):
         try:

@@ -2,14 +2,14 @@
     "selected_asset": "PETR4",
     "active_position_key": "T",
     "window_state": "zoomed",
-    "main_pane_sash": 304,
+    "main_pane_sash": 243,
     "right_vertical_sash": 312,
     "treeview_columns": {
-        "ticker_call": 57,
-        "ticker_put": 58,
-        "strike": 56,
-        "expiracao": 95
+        "ticker_call": 42,
+        "ticker_put": 43,
+        "strike": 46,
+        "expiracao": 79
     },
-    "bottom_pane_sash_1": 277,
-    "bottom_pane_sash_2": 350
+    "bottom_pane_sash_1": 266,
+    "bottom_pane_sash_2": 366
 }
