@@ -6,8 +6,8 @@
     "right_vertical_sash": 356,
     "treeview_columns": {
         "ticker_call": 52,
-        "ticker_put": 53,
+        "ticker_put": 55,
         "strike": 52,
-        "expiracao": 61
+        "expiracao": 59
     }
 }

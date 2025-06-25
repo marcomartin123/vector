@@ -163,6 +163,10 @@ def processar_arquivos_pdf():
                 resultados_finais_formatados.append(f"{campo}: {valor}")
 
             for t in transacoes:
+                # *** ALTERAÇÃO SOLICITADA: Ignorar ativos que começam com "FI" na geração do arquivo final ***
+                if t['ativo'].strip().startswith("FI"):
+                    continue # Pula para a próxima transação, ignorando esta
+
                 valor_final_calculado = t.get('valor_final_calculado', t['valor_op_num'])
                 valor_final_str = f"{valor_final_calculado:_.2f}".replace('.',',').replace('_','.')
 

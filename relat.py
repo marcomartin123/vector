@@ -20,14 +20,14 @@ CONFIGURATIONS = [
         'input_txt_file': 'notas_extraidas_m.txt',
         'output_json_file': 'fiscal_m.json',
         'output_csv_file': 'extrato_fifo_detalhado_m.csv',
-        'prejuizo_anterior': -50000.00
+        'prejuizo_anterior': -86004.54
     },
     {
         'person_type': 'R',
         'input_txt_file': 'notas_extraidas_r.txt',
         'output_json_file': 'fiscal_r.json',
         'output_csv_file': 'extrato_fifo_detalhado_r.csv',
-        'prejuizo_anterior': -50000.00
+        'prejuizo_anterior': -55799.99
     }
 ]
 

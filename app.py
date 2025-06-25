@@ -26,8 +26,8 @@ POSITION_FILES = {'M': 'position_m.json', 'R': 'position_r.json'}
 FISCAL_M_FILE = 'fiscal_m.json' # Updated path
 FISCAL_R_FILE = 'fiscal_r.json' # Updated path
 # --- FIM DA MODIFICAÇÃO 1 ---
-TARGET_FONT = ('Consolas', 9)
-TARGET_FONT_BOLD = ('Consolas', 9)
+TARGET_FONT = ('Roboto', 9)
+TARGET_FONT_BOLD = ('Roboto', 9)
 EVENT_DEBOUNCE_MS = 300
 
 def mt5_connect():
@@ -183,7 +183,7 @@ class OptionStrategyApp:
         style.configure("TLabelframe.Label", font=TARGET_FONT_BOLD)
         style.configure("TCombobox", font=TARGET_FONT)
         self.root.option_add("*TCombobox*Listbox*Font", TARGET_FONT)
-        plt.rcParams.update({'font.size': 8, 'axes.titlesize': 8,'font.family': 'Consolas'})
+        plt.rcParams.update({'font.size': 9, 'axes.titlesize': 9,'font.family': 'Roboto'})
 
     def load_data(self):
         try:
@@ -420,7 +420,7 @@ class OptionStrategyApp:
         hsb.pack(side=tk.BOTTOM, fill=tk.X)
         self.tree.pack(fill=tk.BOTH, expand=True)
         
-        op_frame = ttk.LabelFrame(left_frame, text="Operação / Qtd. a Montar (Rolagem)")
+        op_frame = ttk.LabelFrame(left_frame, text="Operação / %Rolagem")
         op_frame.pack(padx=5, pady=5, fill=tk.X, side=tk.BOTTOM)
         op_items = {"Ações": "1000", "Calls": "1000", "Puts": "1000"}
         for i, (key, default_qty) in enumerate(op_items.items()):
@@ -465,9 +465,9 @@ class OptionStrategyApp:
         self.right_vertical_pane.add(bottom_text_frame, weight=1)
 
         bottom_text_frame.rowconfigure(0, weight=1)
-        bottom_text_frame.columnconfigure(0, weight=130)
-        bottom_text_frame.columnconfigure(1, weight=70)
-        bottom_text_frame.columnconfigure(2, weight=100)
+        bottom_text_frame.columnconfigure(0, weight=45)
+        bottom_text_frame.columnconfigure(1, weight=30)
+        bottom_text_frame.columnconfigure(2, weight=25)
 
         montagem_frame = ttk.LabelFrame(bottom_text_frame, text="Montagem")
         montagem_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 2), pady=2)
@@ -714,16 +714,15 @@ class OptionStrategyApp:
         self.ax_left.set_title("Simulação Montagem/Rolagem", fontsize=9)
         self.ax_right.set_title(f"Posição Atual ({self.current_position_key})", fontsize=9)
 
-        # --- INÍCIO DA MODIFICAÇÃO: Mover rótulos do eixo Y ---
-        # Ocultar rótulos e ticks do eixo Y do gráfico esquerdo
-        self.ax_left.set_yticklabels([])
-        self.ax_left.tick_params(axis='y', which='both', left=False, labelleft=False, right=False, labelright=False)
-
-        # Configurar eixo Y do gráfico direito para mostrar rótulos à sua esquerda
-        self.ax_right.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1)) # Aplicar formatador SÓ AQUI
-        self.ax_right.tick_params(axis='y', which='both', left=True, labelleft=True, right=False, labelright=False)
-        self.ax_right.yaxis.set_ticks_position('left')
-        self.ax_right.yaxis.set_label_position('left')
+        # --- INÍCIO DA MODIFICAÇÃO: Habilitar rótulos do eixo Y em ambos os gráficos ---
+        # Itera sobre os dois eixos para aplicar as mesmas configurações de Y
+        for ax in [self.ax_left, self.ax_right]:
+            # Aplica o formatador de porcentagem ao eixo Y
+            ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
+            # Garante que os ticks e rótulos do eixo Y estejam visíveis à esquerda
+            ax.tick_params(axis='y', which='both', left=True, labelleft=True, right=False, labelright=False)
+            ax.yaxis.set_ticks_position('left')
+            ax.yaxis.set_label_position('left')
         # --- FIM DA MODIFICAÇÃO ---
         
         self._plot_simulation_payout()
@@ -731,7 +730,6 @@ class OptionStrategyApp:
         
         self.fig.tight_layout(pad=0.5)
         self.canvas.draw()
-    # --- FIM MODIFICAÇÃO GRÁFICO ---
 
     def calculate_and_plot(self):
         # Esta função foi substituída pela nova lógica, mas é mantida por segurança caso haja alguma chamada antiga
@@ -1108,7 +1106,7 @@ class OptionStrategyApp:
     def _render_payout_on_axis(self, ax, pc_range, pnl_values, params, title, asset_name, pnl_pct_attr_name):
         """Função genérica para renderizar um gráfico de payoff em um eixo (ax) específico."""
         setattr(self, pnl_pct_attr_name, 0.0)
-        graph_font_size = 8
+        graph_font_size = 7
         ax.set_title(title, fontsize=9)
         ax.tick_params(axis='both', which='major', labelsize=graph_font_size, colors='blue')
 
@@ -1130,10 +1128,14 @@ class OptionStrategyApp:
 
 
         line, = ax.plot(pc_range, y_axis_values, linewidth=1.5)
-        ax.axvline(0, color='gray', ls=':', lw=0.9)
+        ax.axvline(0, color='gray', ls='-', lw=0.9)
         
         if params.get('asset_p', 0) != 0 and params.get('strike') is not None:
-             ax.axvline((params['strike'] - params['asset_p']) / params['asset_p'], color='red', ls=':', lw=0.9)
+             ax.axvline((params['strike'] - params['asset_p']) / params['asset_p'], color='red', ls='-', lw=0.9)
+
+        # Adiciona as barras verticais em +12% e -12%
+        ax.axvline(x=0.12, color='green', ls='-', lw=0.9, alpha=0.7)
+        ax.axvline(x=-0.12, color='green', ls='-', lw=0.9, alpha=0.7)
 
         if asset_name:
             prices = mt5_get_all_prices_optimized([asset_name])
@@ -1142,7 +1144,7 @@ class OptionStrategyApp:
                 x_pos = (live_price - params['asset_p']) / params['asset_p']
                 # Garante que a linha vertical do preço ao vivo não ultrapasse os limites do gráfico
                 if -0.30 <= x_pos <= 0.30:
-                    ax.axvline(x=x_pos, color='green', ls=':', lw=0.9)
+                    ax.axvline(x=x_pos, color='green', ls='-', lw=0.9)
                 
                 pnl_at_live_price = ((live_price - params.get('asset_p', 0)) * params.get('asset_q', 0)) + \
                                     ((params.get('call_p', 0) - max(0, live_price - params.get('strike', 0))) * params.get('call_q', 0)) + \
@@ -1160,10 +1162,23 @@ class OptionStrategyApp:
                     else:
                         pnl_percent_at_live_price = (pnl_at_live_price / capital_base) * 100 if capital_base > 0 else 0
                         setattr(self, pnl_pct_attr_name, pnl_percent_at_live_price)
-                        percent_str = f"{pnl_percent_at_live_price:.1f}".replace('.', ',') + '%'
+                        percent_str = f"{pnl_percent_at_live_price:.2f}".replace('.', ',') + '%'
                         label_text = f"{price_str} | {percent_str} | {financial_str}"
                     
-                    ax.annotate(label_text, (x_pos, y_at_live_price), textcoords="offset points", xytext=(8, -5), ha='left', va='center', fontsize=graph_font_size, bbox=dict(boxstyle="round,pad=0.3", fc="yellow", ec="black", lw=0.5, alpha=0.7))
+                    # --- INÍCIO DA MODIFICAÇÃO: FIXAR CAIXA DE ANOTAÇÃO ---
+                    # A linha de anotação foi alterada para usar coordenadas do eixo ('axes fraction')
+                    # em vez de coordenadas relativas ao ponto ('offset points').
+                    # xytext=(0.5, 0.95) -> Posiciona a caixa em 50% da largura e 95% da altura do gráfico.
+                    # ha='center', va='top' -> Centraliza a caixa horizontalmente e alinha pelo topo.
+                    ax.annotate(label_text,
+                                xy=(x_pos, y_at_live_price),
+                                xytext=(0.5, 0.95),
+                                textcoords='axes fraction',
+                                ha='center',
+                                va='top',
+                                fontsize=graph_font_size,
+                                bbox=dict(boxstyle="round,pad=0.3", fc="yellow", ec="black", lw=0.5, alpha=0.7))
+                    # --- FIM DA MODIFICAÇÃO ---
 
         # Adiciona anotações a cada 5% no eixo X
         for x_pc_annotation in np.arange(-0.30, 0.301, 0.05):

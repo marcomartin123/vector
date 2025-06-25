@@ -4,11 +4,11 @@
         "arquivo_entrada_txt": "notas_extraidas_r.txt",
         "arquivo_saida_json": "fiscal_r.json",
         "arquivo_saida_csv": "extrato_fifo_detalhado_r.csv",
-        "prejuizo_anterior_informado": -50000.0
+        "prejuizo_anterior_informado": -55799.99
     },
     "sumario_executivo": {
-        "total_operacoes_carregadas": 285,
-        "total_ativos_carteira": 26,
+        "total_operacoes_carregadas": 198,
+        "total_ativos_carteira": 8,
         "meses_com_atividade": 2
     },
     "posicao_atual_carteira": [
@@ -33,16 +33,6 @@
             "Custo": ""
         },
         {
-            "Ticker": "FII EUROPAR ",
-            "Qtd": "-23",
-            "PM C": "",
-            "PM V": "231,85",
-            "T Invest": "0,00",
-            "T Receb": "5.332,59",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
             "Ticker": "PETROBRAS ON",
             "Qtd": "0",
             "PM C": "34,36",
@@ -50,176 +40,6 @@
             "T Invest": "44.669,47",
             "T Receb": "43.079,52",
             "P/L": "-1.589,95",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FII VINCI LG",
-            "Qtd": "-40",
-            "PM C": "",
-            "PM V": "85,53",
-            "T Invest": "0,00",
-            "T Receb": "3.421,34",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FII MERITO I",
-            "Qtd": "-51",
-            "PM C": "",
-            "PM V": "83,47",
-            "T Invest": "0,00",
-            "T Receb": "4.257,04",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FII FATOR VE",
-            "Qtd": "-41",
-            "PM C": "",
-            "PM V": "80,11",
-            "T Invest": "0,00",
-            "T Receb": "3.284,39",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FII VOT LOG ",
-            "Qtd": "-36",
-            "PM C": "",
-            "PM V": "90,31",
-            "T Invest": "0,00",
-            "T Receb": "3.251,26",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FII BEES CRI",
-            "Qtd": "-66",
-            "PM C": "",
-            "PM V": "67,94",
-            "T Invest": "0,00",
-            "T Receb": "4.484,06",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FII RIONEGRO",
-            "Qtd": "-57",
-            "PM C": "",
-            "PM V": "44,94",
-            "T Invest": "0,00",
-            "T Receb": "2.561,57",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FII OURI JPP",
-            "Qtd": "-35",
-            "PM C": "",
-            "PM V": "80,47",
-            "T Invest": "0,00",
-            "T Receb": "2.816,48",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FII TG ATIVO",
-            "Qtd": "-45",
-            "PM C": "",
-            "PM V": "88,30",
-            "T Invest": "0,00",
-            "T Receb": "3.973,38",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FIAGRO KINEA",
-            "Qtd": "-56",
-            "PM C": "",
-            "PM V": "96,05",
-            "T Invest": "0,00",
-            "T Receb": "5.378,55",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FII ANH EDUC",
-            "Qtd": "-89",
-            "PM C": "",
-            "PM V": "143,46",
-            "T Invest": "0,00",
-            "T Receb": "12.768,36",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FII BTG CRI ",
-            "Qtd": "-466",
-            "PM C": "",
-            "PM V": "9,25",
-            "T Invest": "0,00",
-            "T Receb": "4.308,95",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FII G TOWERS",
-            "Qtd": "-49",
-            "PM C": "",
-            "PM V": "76,42",
-            "T Invest": "0,00",
-            "T Receb": "3.744,57",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FII HECTARE ",
-            "Qtd": "-84",
-            "PM C": "",
-            "PM V": "24,78",
-            "T Invest": "0,00",
-            "T Receb": "2.081,63",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FII CEO CCP ",
-            "Qtd": "-90",
-            "PM C": "",
-            "PM V": "41,01",
-            "T Invest": "0,00",
-            "T Receb": "3.691,06",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FIAGRO RIZA ",
-            "Qtd": "-101",
-            "PM C": "",
-            "PM V": "8,79",
-            "T Invest": "0,00",
-            "T Receb": "887,47",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FII REC REND",
-            "Qtd": "-56",
-            "PM C": "",
-            "PM V": "32,75",
-            "T Invest": "0,00",
-            "T Receb": "1.834,13",
-            "P/L": "0,00",
-            "Custo": ""
-        },
-        {
-            "Ticker": "FII GGRCOVEP",
-            "Qtd": "-450",
-            "PM C": "",
-            "PM V": "10,08",
-            "T Invest": "0,00",
-            "T Receb": "4.534,37",
-            "P/L": "0,00",
             "Custo": ""
         },
         {
@@ -280,17 +100,17 @@
             "Vendas": "1.362,08",
             "P/L": "0,00",
             "Posição F": 0,
-            "Saldo Fiscal": "-50.000,00",
+            "Saldo Fiscal": "-55.799,99",
             "Imposto": "0,00",
             "St Fiscal": "SEM RESULTADO"
         },
         {
             "Mês": "06/2025",
             "COMPRAS": "1.472.288,35",
-            "Vendas": "324.494,57",
+            "Vendas": "251.883,37",
             "P/L": "-109.627,39",
             "Posição F": 107,
-            "Saldo Fiscal": "-159.627,39",
+            "Saldo Fiscal": "-165.427,38",
             "Imposto": "0,00",
             "St Fiscal": "PREJUÍZO ACUMULADO"
         }

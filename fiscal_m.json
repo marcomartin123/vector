@@ -4,7 +4,7 @@
         "arquivo_entrada_txt": "notas_extraidas_m.txt",
         "arquivo_saida_json": "fiscal_m.json",
         "arquivo_saida_csv": "extrato_fifo_detalhado_m.csv",
-        "prejuizo_anterior_informado": -50000.0
+        "prejuizo_anterior_informado": -86004.54
     },
     "sumario_executivo": {
         "total_operacoes_carregadas": 118,
@@ -70,7 +70,7 @@
             "Vendas": "137.222,76",
             "P/L": "-65.843,64",
             "Posição F": 58,
-            "Saldo Fiscal": "-115.843,64",
+            "Saldo Fiscal": "-151.848,18",
             "Imposto": "0,00",
             "St Fiscal": "PREJUÍZO ACUMULADO"
         }
