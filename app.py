@@ -1082,6 +1082,12 @@ class OptionStrategyApp:
         ax.set_title(title, fontsize=9)
         ax.tick_params(axis='both', which='major', labelsize=graph_font_size, colors='blue')
 
+        # >>>>>>>>>>>>>>>>>>>>>>>>> LINHAS ADICIONADAS AQUI <<<<<<<<<<<<<<<<<<<<<<<<<
+        # Altera a cor da borda (spines) do gráfico para cinza
+        for spine in ['top', 'bottom', 'left', 'right']:
+            ax.spines[spine].set_edgecolor('gray')
+        # >>>>>>>>>>>>>>>>>>>>>>>>> FIM DA ADIÇÃO <<<<<<<<<<<<<<<<<<<<<<<<<
+
         capital_base = abs((params.get('asset_p', 0) * params.get('asset_q', 0)) -
                            (params.get('call_p', 0) * params.get('call_q', 0)) +
                            (params.get('put_p', 0) * params.get('put_q', 0)))
