@@ -23,7 +23,7 @@ POSITION_FILES = {'M': 'position_m.json', 'R': 'position_r.json'}
 FISCAL_M_FILE = 'fiscal_m.json'
 FISCAL_R_FILE = 'fiscal_r.json'
 TARGET_FONT = ('MS Reference Sans Serif', 10)
-TARGET_FONT_BOLD = ('MS Reference Sans Serif', 10)
+TARGET_FONT_BOLD = ('MS Reference Sans Serif', 10,'bold')
 EVENT_DEBOUNCE_MS = 300
 
 def mt5_connect():
