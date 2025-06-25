@@ -1,4 +1,3 @@
-#final 1 - Lógica de Posição Combinada (v2)
 import tkinter as tk
 from tkinter import ttk, messagebox, font as tkfont
 import pandas as pd
@@ -11,23 +10,20 @@ from datetime import datetime
 import time
 import json
 import os
-import subprocess # Added for sync scripts
-import threading  # Added for sync scripts
-import sys        # Added for sys.executable in sync scripts
+import subprocess 
+import threading  
+import sys        
 import zipfile
 
 CSV_FILE_PATH = 'base.csv'
 APP_TITLE = "Vector Profit Strategy"
 HIGHLIGHT_COLOR = 'lightblue'
 SETTINGS_FILE = "app_settings.json"
-# Arquivos de posição base. 'T' é uma visão combinada, não um arquivo.
 POSITION_FILES = {'M': 'position_m.json', 'R': 'position_r.json'}
-# --- INÍCIO DA MODIFICAÇÃO 1: Adicionar caminhos dos arquivos fiscais ---
-FISCAL_M_FILE = 'fiscal_m.json' # Updated path
-FISCAL_R_FILE = 'fiscal_r.json' # Updated path
-# --- FIM DA MODIFICAÇÃO 1 ---
-TARGET_FONT = ('Roboto', 9)
-TARGET_FONT_BOLD = ('Roboto', 9)
+FISCAL_M_FILE = 'fiscal_m.json'
+FISCAL_R_FILE = 'fiscal_r.json'
+TARGET_FONT = ('MS Reference Sans Serif', 10)
+TARGET_FONT_BOLD = ('MS Reference Sans Serif', 10)
 EVENT_DEBOUNCE_MS = 300
 
 def mt5_connect():
@@ -88,14 +84,14 @@ class OptionStrategyApp:
 
         self.df_options, self.current_asset_price, self.selected_option_pair = None, None, None
         self.mt5_prices, self.current_position, self.tree_item_map = {}, {}, {}
-        self.ax_left, self.ax_right = None, None # MODIFICADO: Para os dois gráficos
+        self.ax_left, self.ax_right = None, None
         self.current_position_key = 'T'
         self._tree_sort_column, self._tree_sort_reverse = None, False
         self.last_filtered_df_for_treeview = pd.DataFrame()
         self._debounce_job = None
         self._goal_seek_debounce_job = None
-        self.last_graph_pnl_pct_sim = 0.0 # MODIFICADO: PnL% para gráfico de simulação
-        self.last_graph_pnl_pct_pos = 0.0 # NOVO: PnL% para gráfico de posição
+        self.last_graph_pnl_pct_sim = 0.0
+        self.last_graph_pnl_pct_pos = 0.0
 
         self.qty_spinboxes = {}
         self.price_entries = {}
@@ -149,7 +145,7 @@ class OptionStrategyApp:
                 new_target_value = custo_montagem * pct_val
                 self.target_profit_var.set(f"{new_target_value:.0f}")
         except (ValueError, TypeError):
-            pass # Ignora se o valor no campo % for inválido
+            pass
         finally:
             self._is_updating_target_profit = False
 
@@ -183,7 +179,7 @@ class OptionStrategyApp:
         style.configure("TLabelframe.Label", font=TARGET_FONT_BOLD)
         style.configure("TCombobox", font=TARGET_FONT)
         self.root.option_add("*TCombobox*Listbox*Font", TARGET_FONT)
-        plt.rcParams.update({'font.size': 9, 'axes.titlesize': 9,'font.family': 'Roboto'})
+        plt.rcParams.update({'font.size': 9, 'axes.titlesize': 9,'font.family': 'MS Reference Sans Serif'})
 
     def load_data(self):
         try:
@@ -199,7 +195,7 @@ class OptionStrategyApp:
         mt5_disconnect()
         self.root.quit()
         self.root.destroy()
-        import sys as sys_on_close # Avoid conflict with global sys
+        import sys as sys_on_close
         sys_on_close.exit(0)
 
 
@@ -328,10 +324,7 @@ class OptionStrategyApp:
     def _update_all_dynamic_info(self):
         self.update_position_display()
         self.calculate_and_display_rollover()
-        # --- INÍCIO MODIFICAÇÃO GRÁFICO ---
-        # A chamada para atualizar os gráficos agora está centralizada aqui
         self._update_payout_graphs()
-        # --- FIM MODIFICAÇÃO GRÁFICO ---
         
     def _populate_unwind_boxes_from_position(self):
         if self.current_position:
@@ -444,21 +437,12 @@ class OptionStrategyApp:
         self.right_vertical_pane = ttk.PanedWindow(right_main_frame, orient=tk.VERTICAL)
         self.right_vertical_pane.pack(fill=tk.BOTH, expand=True)
 
-        # --- INÍCIO MODIFICAÇÃO GRÁFICO ---
         graph_frame = ttk.LabelFrame(self.right_vertical_pane, text="Gráficos de Payout")
         self.fig, (self.ax_left, self.ax_right) = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(10, 4),gridspec_kw={'width_ratios': [1, 1]})
-        # --- FIM MODIFICAÇÃO GRÁFICO ---
         self.canvas = FigureCanvasTkAgg(self.fig, master=graph_frame)
-        self.canvas.draw() # Adicionado para garantir que o canvas seja desenhado
+        self.canvas.draw()
         
-        # --- INÍCIO DA MODIFICAÇÃO: Adicionar NavigationToolbar2Tk ---
-        toolbar_frame = ttk.Frame(graph_frame) # Frame para a toolbar
-        toolbar_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=(2,0))
-        toolbar = NavigationToolbar2Tk(self.canvas, toolbar_frame)
-        toolbar.update()
-        # --- FIM DA MODIFICAÇÃO ---
-        
-        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True) # Ajustado para side=tk.TOP
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self.right_vertical_pane.add(graph_frame, weight=2)
         
         bottom_text_frame = ttk.Frame(self.right_vertical_pane)
@@ -662,7 +646,6 @@ class OptionStrategyApp:
         except (ValueError, KeyError, AttributeError):
             return None
 
-    # --- INÍCIO MODIFICAÇÃO GRÁFICO: LÓGICA DE PLOTAGEM SEPARADA ---
     def _plot_simulation_payout(self):
         """Calcula e plota o payoff para a operação de simulação (gráfico da esquerda)."""
         params = self._get_strategy_parameters()
@@ -709,21 +692,15 @@ class OptionStrategyApp:
             ax.grid(True, linestyle=':', alpha=0.7)
             ax.axhline(0, color='black', linestyle='--', linewidth=1)
             ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
-            # A formatação do eixo Y será tratada individualmente abaixo
 
         self.ax_left.set_title("Simulação Montagem/Rolagem", fontsize=9)
         self.ax_right.set_title(f"Posição Atual ({self.current_position_key})", fontsize=9)
 
-        # --- INÍCIO DA MODIFICAÇÃO: Habilitar rótulos do eixo Y em ambos os gráficos ---
-        # Itera sobre os dois eixos para aplicar as mesmas configurações de Y
         for ax in [self.ax_left, self.ax_right]:
-            # Aplica o formatador de porcentagem ao eixo Y
             ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=1))
-            # Garante que os ticks e rótulos do eixo Y estejam visíveis à esquerda
             ax.tick_params(axis='y', which='both', left=True, labelleft=True, right=False, labelright=False)
             ax.yaxis.set_ticks_position('left')
             ax.yaxis.set_label_position('left')
-        # --- FIM DA MODIFICAÇÃO ---
         
         self._plot_simulation_payout()
         self._plot_position_payout()
@@ -732,7 +709,6 @@ class OptionStrategyApp:
         self.canvas.draw()
 
     def calculate_and_plot(self):
-        # Esta função foi substituída pela nova lógica, mas é mantida por segurança caso haja alguma chamada antiga
         self._update_payout_graphs()
         params = self._get_strategy_parameters()
         if params:
@@ -1043,14 +1019,14 @@ class OptionStrategyApp:
     def update_position_display(self):
         if not self.current_position: 
             self._update_text_widget(self.position_text, "Nenhuma posição montada.")
-            self._update_target_profit_pct() # Limpa o %
+            self._update_target_profit_pct()
             return
             
         pos = self.current_position
         tickers = pos.get('tickers', {})
         if not tickers:
             self._update_text_widget(self.position_text, "Posição sem tickers definidos.")
-            self._update_target_profit_pct() # Limpa o %
+            self._update_target_profit_pct()
             return
 
         prices = mt5_get_all_prices_optimized(list(tickers.values()))
@@ -1090,10 +1066,7 @@ class OptionStrategyApp:
         widget.insert(tk.END, "Resultado Atual %: ")
         widget.insert(tk.END, f"{resultado_pct:+.2f}%\n", "positivo" if resultado_pct >= 0 else "negativo")
         
-        # --- INÍCIO MODIFICAÇÃO GRÁFICO ---
-        # Usa o PnL do gráfico da posição (direita) para o custo de saída
         graph_pnl_pct = getattr(self, 'last_graph_pnl_pct_pos', 0.0)
-        # --- FIM MODIFICAÇÃO GRÁFICO ---
         
         exit_cost_pct = max(0, graph_pnl_pct - resultado_pct)
         widget.insert(tk.END, "Custo saída: ")
@@ -1102,11 +1075,10 @@ class OptionStrategyApp:
 
         self._update_target_profit_pct()
 
-    # --- INÍCIO MODIFICAÇÃO GRÁFICO: LÓGICA DE PLOTAGEM GENÉRICA ---
     def _render_payout_on_axis(self, ax, pc_range, pnl_values, params, title, asset_name, pnl_pct_attr_name):
         """Função genérica para renderizar um gráfico de payoff em um eixo (ax) específico."""
         setattr(self, pnl_pct_attr_name, 0.0)
-        graph_font_size = 7
+        graph_font_size = 8
         ax.set_title(title, fontsize=9)
         ax.tick_params(axis='both', which='major', labelsize=graph_font_size, colors='blue')
 
@@ -1121,7 +1093,6 @@ class OptionStrategyApp:
         
         ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('R$ %.0f') if show_absolute_return else mtick.PercentFormatter(xmax=1.0, decimals=1))
         
-        # Define o range do eixo X de -30% a +30% e ticks a cada 5%
         ax.set_xlim(-0.30, 0.30)
         ax.xaxis.set_major_locator(mtick.MultipleLocator(0.05))
         ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
@@ -1133,7 +1104,6 @@ class OptionStrategyApp:
         if params.get('asset_p', 0) != 0 and params.get('strike') is not None:
              ax.axvline((params['strike'] - params['asset_p']) / params['asset_p'], color='red', ls='-', lw=0.9)
 
-        # Adiciona as barras verticais em +12% e -12%
         ax.axvline(x=0.12, color='green', ls='-', lw=0.9, alpha=0.7)
         ax.axvline(x=-0.12, color='green', ls='-', lw=0.9, alpha=0.7)
 
@@ -1142,7 +1112,6 @@ class OptionStrategyApp:
             live_price = prices.get(f'{asset_name}_ask')
             if live_price and params.get('asset_p', 0) != 0 and params.get('strike') is not None:
                 x_pos = (live_price - params['asset_p']) / params['asset_p']
-                # Garante que a linha vertical do preço ao vivo não ultrapasse os limites do gráfico
                 if -0.30 <= x_pos <= 0.30:
                     ax.axvline(x=x_pos, color='green', ls='-', lw=0.9)
                 
@@ -1152,7 +1121,7 @@ class OptionStrategyApp:
                 
                 y_at_live_price = pnl_at_live_price if show_absolute_return else (pnl_at_live_price / capital_base if capital_base > 0 else 0)
                 
-                if -0.30 <= x_pos <= 0.30: # Só plota o ponto e anotação se estiver dentro do range visível
+                if -0.30 <= x_pos <= 0.30:
                     ax.plot(x_pos, y_at_live_price, 'o', ms=5, color='green')
                     
                     price_str = f"{live_price:.2f}"
@@ -1165,43 +1134,29 @@ class OptionStrategyApp:
                         percent_str = f"{pnl_percent_at_live_price:.2f}".replace('.', ',') + '%'
                         label_text = f"{price_str} | {percent_str} | {financial_str}"
                     
-                    # --- INÍCIO DA MODIFICAÇÃO: FIXAR CAIXA DE ANOTAÇÃO ---
-                    # A linha de anotação foi alterada para usar coordenadas do eixo ('axes fraction')
-                    # em vez de coordenadas relativas ao ponto ('offset points').
-                    # xytext=(0.5, 0.95) -> Posiciona a caixa em 50% da largura e 95% da altura do gráfico.
-                    # ha='center', va='top' -> Centraliza a caixa horizontalmente e alinha pelo topo.
                     ax.annotate(label_text,
                                 xy=(x_pos, y_at_live_price),
-                                xytext=(0.5, 0.95),
+                                xytext=(0.85, 0.15),
                                 textcoords='axes fraction',
                                 ha='center',
                                 va='top',
                                 fontsize=graph_font_size,
                                 bbox=dict(boxstyle="round,pad=0.3", fc="yellow", ec="black", lw=0.5, alpha=0.7))
-                    # --- FIM DA MODIFICAÇÃO ---
-
-        # Adiciona anotações a cada 5% no eixo X
-        for x_pc_annotation in np.arange(-0.30, 0.301, 0.05):
-            # Encontra o índice mais próximo no pc_range para obter o valor de y (pnl)
-            # pc_range é o array original usado para plotar pnl_values
+        for x_pc_annotation in np.arange(-0.25, 0.252, 0.05):
             idx = (np.abs(pc_range - x_pc_annotation)).argmin()
-            y_plot_annotation = y_axis_values[idx] # y_axis_values já está em % ou R$ conforme show_absolute_return
-            pnl_absolute_annotation = pnl_values[idx] # pnl_values está sempre em R$
+            y_plot_annotation = y_axis_values[idx]
+            pnl_absolute_annotation = pnl_values[idx]
 
-            # Plota um pequeno círculo no ponto de interesse
             ax.plot(x_pc_annotation, y_plot_annotation, 'o', ms=4, color=line.get_color(), alpha=0.7)
 
-            # Prepara o texto da anotação
-            financial_str_annotation = f"{pnl_absolute_annotation:,.0f}".replace(",", ".") # Sempre mostrar financeiro
+            financial_str_annotation = f"{pnl_absolute_annotation:,.0f}".replace(",", ".")
 
-            # Se y_axis_values estiver em %, formata esse % também
             if not show_absolute_return and capital_base > 0:
                 y_percent_str_annotation = f"{(pnl_absolute_annotation / capital_base) * 100:.1f}%"
-                label_text_annotation = f"{y_percent_str_annotation}\n{financial_str_annotation}" # Removido parênteses
-            else: # Se y_axis_values estiver em R$ (show_absolute_return é True ou capital_base é 0)
+                label_text_annotation = f"{y_percent_str_annotation}\n{financial_str_annotation}"
+            else:
                 label_text_annotation = f"{financial_str_annotation}"
 
-            # Adiciona a anotação
             ax.annotate(label_text_annotation,
                         (x_pc_annotation, y_plot_annotation),
                         textcoords="offset points",
@@ -1211,7 +1166,6 @@ class OptionStrategyApp:
                         fontsize=graph_font_size -1, # Fonte um pouco menor para não poluir muito
                         multialignment='center',
                         bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", lw=0, alpha=0.0)) # Background transparente (alpha=0.0)
-    # --- FIM MODIFICAÇÃO GRÁFICO ---
 
     def _update_summary_widgets(self, params):
         if not self.selected_option_pair or not self.mt5_prices:
@@ -1460,7 +1414,6 @@ class OptionStrategyApp:
         child_env["PYTHONIOENCODING"] = "utf-8"
 
         try:
-            # --- ETAPA 1: EXECUTAR down.py ---
             self.root.after_idle(progress_popup_instance.update_progress, "download", "Executando...")
             process_down = subprocess.run([sys.executable, 'down.py'], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace', env=child_env)
 
@@ -1473,9 +1426,8 @@ class OptionStrategyApp:
                 error_message = f"Erro ao executar down.py:\nReturn Code: {process_down.returncode}\nOutput:\n{process_down.stdout}\nError:\n{process_down.stderr}"
                 self.root.after_idle(lambda: messagebox.showerror("Erro em down.py", error_message, parent=parent_window))
                 self.root.after_idle(progress_popup_instance.show_close_button)
-                return # Aborta o resto do processo
+                return
 
-            # --- ETAPA 2: DESCOMPACTAR (se download OK) ---
             self.root.after_idle(progress_popup_instance.update_progress, "si", "Iniciando...", 0)
             if not os.path.exists(extract_folder):
                 os.makedirs(extract_folder)
@@ -1505,15 +1457,12 @@ class OptionStrategyApp:
             
             self.root.after_idle(progress_popup_instance.update_progress, "si", "Concluído!", 100)
             
-            # --- ETAPA 3: SINCRONIZAR (se descompactação OK) ---
             self.root.after_idle(progress_popup_instance.update_progress, "sync", "Executando...")
             process_sync = subprocess.run([sys.executable, 'sync.py'], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace', env=child_env)
             if process_sync.returncode == 0:
                 self.root.after_idle(progress_popup_instance.update_progress, "sync", "Concluído!", 100)
-                # --- INÍCIO DA MODIFICAÇÃO: Recarregar dados e atualizar TreeView ---
                 self.root.after_idle(self.load_data)
                 self.root.after_idle(self.on_asset_selected)
-                # --- FIM DA MODIFICAÇÃO ---
             else:
                 self.root.after_idle(progress_popup_instance.update_progress, "sync", "Erro!", 0)
                 error_message_sync = f"Erro ao executar sync.py:\nReturn Code: {process_sync.returncode}\nOutput:\n{process_sync.stdout}\nError:\n{process_sync.stderr}"
@@ -1544,7 +1493,6 @@ class OptionStrategyApp:
             if hasattr(self, 'si_btn') and self.si_btn.winfo_exists():
                 self.root.after_idle(lambda: self.si_btn.config(state=tk.NORMAL, text="SI"))
 
-    # --- INÍCIO DA MODIFICAÇÃO 3: Lógica genérica para Popup Fiscal ---
     def show_fiscal_report_popup(self, file_path, title):
         """Abre um popup para exibir dados fiscais de um arquivo JSON."""
         if not os.path.exists(file_path):
@@ -1624,7 +1572,6 @@ class OptionStrategyApp:
             tree.insert("", "end", values=values, tags=(tag,))
 
         return frame
-    # --- FIM DA MODIFICAÇÃO 3 ---
 
 class SyncProgressPopup:
     def __init__(self, master):
@@ -1633,7 +1580,7 @@ class SyncProgressPopup:
         self.popup.title("Sincronizando Scripts...")
         self.popup.transient(master)
         self.popup.grab_set()
-        self.popup.geometry("450x150") # Largura aumentada de 300 para 450
+        self.popup.geometry("450x150")
         self.popup.protocol("WM_DELETE_WINDOW", lambda: None)
 
 
@@ -1698,26 +1645,23 @@ class SIProgressPopup:
         self.popup.title("Processando SI...")
         self.popup.transient(master)
         self.popup.grab_set()
-        self.popup.geometry("500x210") # Largura aumentada de 350 para 500
+        self.popup.geometry("500x210")
         self.popup.protocol("WM_DELETE_WINDOW", lambda: None)
 
         pad_options = {'padx': 10, 'pady': 5}
 
-        # --- NOVA TAREFA: Download ---
         ttk.Label(self.popup, text="Download SI:").grid(row=0, column=0, sticky=tk.W, **pad_options)
         self.download_progress = ttk.Progressbar(self.popup, orient=tk.HORIZONTAL, length=150, mode='indeterminate')
         self.download_progress.grid(row=0, column=1, **pad_options)
         self.download_status_label = ttk.Label(self.popup, text="Aguardando...")
         self.download_status_label.grid(row=0, column=2, sticky=tk.W, **pad_options)
 
-        # Tarefa de Extração
         ttk.Label(self.popup, text="Extração ZIP:").grid(row=1, column=0, sticky=tk.W, **pad_options)
         self.si_progress = ttk.Progressbar(self.popup, orient=tk.HORIZONTAL, length=150, mode='indeterminate')
         self.si_progress.grid(row=1, column=1, **pad_options)
         self.si_status_label = ttk.Label(self.popup, text="Aguardando...")
         self.si_status_label.grid(row=1, column=2, sticky=tk.W, **pad_options)
 
-        # Tarefa de Sincronização
         ttk.Label(self.popup, text="Sincronização:").grid(row=2, column=0, sticky=tk.W, **pad_options)
         self.sync_progress = ttk.Progressbar(self.popup, orient=tk.HORIZONTAL, length=150, mode='indeterminate')
         self.sync_progress.grid(row=2, column=1, **pad_options)
