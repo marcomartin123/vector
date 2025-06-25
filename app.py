@@ -117,7 +117,6 @@ class OptionStrategyApp:
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def _get_current_assembly_cost(self):
-        """Calcula e retorna o valor absoluto do 'Custo Montagem' da posição atual."""
         if not self.current_position:
             return 0
         pos = self.current_position
@@ -127,13 +126,11 @@ class OptionStrategyApp:
         return abs(cost)
 
     def trigger_target_profit_update_from_pct(self, event=None):
-        """Aplica debounce na atualização do campo % para o campo R$."""
         if self._target_profit_pct_debounce_job:
             self.root.after_cancel(self._target_profit_pct_debounce_job)
         self._target_profit_pct_debounce_job = self.root.after(EVENT_DEBOUNCE_MS, self._update_target_profit_from_pct)
 
     def _update_target_profit_from_pct(self):
-        """Atualiza o Lucro Alvo em R$ com base no alvo em %."""
         if self._is_updating_target_profit:
             return
         self._is_updating_target_profit = True
@@ -150,7 +147,6 @@ class OptionStrategyApp:
             self._is_updating_target_profit = False
 
     def _update_target_profit_pct(self, *args):
-        """Atualiza o Lucro Alvo em % com base no alvo em R$."""
         if self._is_updating_target_profit:
             return
         self._is_updating_target_profit = True
@@ -178,6 +174,11 @@ class OptionStrategyApp:
         style.configure("Treeview.Heading", font=TARGET_FONT_BOLD)
         style.configure("TLabelframe.Label", font=TARGET_FONT_BOLD)
         style.configure("TCombobox", font=TARGET_FONT)
+        
+        style.configure("NoBorder.Treeview", borderwidth=0, relief="flat", rowheight=18, font=TARGET_FONT)
+        style.layout("NoBorder.Treeview", [('Treeview.treearea', {'sticky': 'nswe'})])
+        style.configure("NoBorder.Treeview.Heading", font=TARGET_FONT)
+        
         self.root.option_add("*TCombobox*Listbox*Font", TARGET_FONT)
         plt.rcParams.update({'font.size': 9, 'axes.titlesize': 9,'font.family': 'MS Reference Sans Serif'})
 
@@ -197,7 +198,6 @@ class OptionStrategyApp:
         self.root.destroy()
         import sys as sys_on_close
         sys_on_close.exit(0)
-
 
     def _read_single_position_file(self, file_key):
         filename = POSITION_FILES.get(file_key)
@@ -336,7 +336,6 @@ class OptionStrategyApp:
             self.unwind_qty_spinboxes["Calls"]["var"].set(0)
             self.unwind_qty_spinboxes["Puts"]["var"].set(0)
 
-
     def save_settings(self):
         settings = {
             "selected_asset": self.asset_combo.get() if hasattr(self, 'asset_combo') else "",
@@ -348,6 +347,9 @@ class OptionStrategyApp:
             if hasattr(self, 'main_paned_window'): settings["main_pane_sash"] = self.main_paned_window.sashpos(0)
             if hasattr(self, 'right_vertical_pane'): settings["right_vertical_sash"] = self.right_vertical_pane.sashpos(0)
             if hasattr(self, 'tree'): settings["treeview_columns"] = {col_id: self.tree.column(col_id, "width") for col_id in self.tree["columns"]}
+            # Salvar as posições das novas divisórias
+            if hasattr(self, 'bottom_paned_window'): settings["bottom_pane_sash_1"] = self.bottom_paned_window.sashpos(0)
+            if hasattr(self, 'inner_bottom_paned_window'): settings["bottom_pane_sash_2"] = self.inner_bottom_paned_window.sashpos(0)
         except tk.TclError: pass
         with open(SETTINGS_FILE, "w") as f: json.dump(settings, f, indent=4)
 
@@ -370,12 +372,16 @@ class OptionStrategyApp:
         if not settings: return
         sash_map = { 
             "main_pane_sash": self.main_paned_window, 
-            "right_vertical_sash": self.right_vertical_pane 
+            "right_vertical_sash": self.right_vertical_pane,
+            # Restaurar as posições das novas divisórias
+            "bottom_pane_sash_1": self.bottom_paned_window if hasattr(self, 'bottom_paned_window') else None,
+            "bottom_pane_sash_2": self.inner_bottom_paned_window if hasattr(self, 'inner_bottom_paned_window') else None
         }
         for key, pane in sash_map.items():
-            if key in settings and hasattr(pane, 'winfo_exists') and pane.winfo_exists():
+            if pane and key in settings and hasattr(pane, 'winfo_exists') and pane.winfo_exists():
                 try: pane.sashpos(0, settings[key])
                 except tk.TclError: pass
+
         if "treeview_columns" in settings and self.tree.winfo_exists():
             for col_id, width in settings["treeview_columns"].items():
                 if col_id in self.tree["columns"]: self.tree.column(col_id, width=width)
@@ -445,40 +451,74 @@ class OptionStrategyApp:
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self.right_vertical_pane.add(graph_frame, weight=2)
         
-        bottom_text_frame = ttk.Frame(self.right_vertical_pane)
-        self.right_vertical_pane.add(bottom_text_frame, weight=1)
+        # --- INÍCIO DA ÁREA MODIFICADA COM PANEDWINDOW ---
+        bottom_text_container = ttk.Frame(self.right_vertical_pane)
+        self.right_vertical_pane.add(bottom_text_container, weight=1)
 
-        bottom_text_frame.rowconfigure(0, weight=1)
-        bottom_text_frame.columnconfigure(0, weight=45)
-        bottom_text_frame.columnconfigure(1, weight=30)
-        bottom_text_frame.columnconfigure(2, weight=25)
+        self.bottom_paned_window = ttk.PanedWindow(bottom_text_container, orient=tk.HORIZONTAL)
+        self.bottom_paned_window.pack(fill=tk.BOTH, expand=True)
 
-        montagem_frame = ttk.LabelFrame(bottom_text_frame, text="Montagem")
-        montagem_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 2), pady=2)
-        self.summary_text = tk.Text(montagem_frame, wrap=tk.WORD, height=10, font=TARGET_FONT, state=tk.DISABLED)
+        # Frame da Montagem (primeiro painel)
+        montagem_frame = ttk.LabelFrame(self.bottom_paned_window, text="Montagem")
+        self.bottom_paned_window.add(montagem_frame, weight=1) # Peso 1
+        
+        self.summary_text = tk.Text(montagem_frame, wrap=tk.WORD, height=10, font=TARGET_FONT, state=tk.DISABLED, borderwidth=0, relief="flat")
         self.summary_text.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
         self.summary_text.tag_config("positivo", foreground="blue", font=TARGET_FONT)
         self.summary_text.tag_config("negativo", foreground="red", font=TARGET_FONT)
 
-        rolagem_frame = ttk.LabelFrame(bottom_text_frame, text="Rolagem")
-        rolagem_frame.grid(row=0, column=1, sticky="nsew", padx=2, pady=2)
-        
-        rolagem_frame.rowconfigure(0, weight=1)
-        rolagem_frame.columnconfigure(0, weight=1)
-        
-        self.rolagem_text = tk.Text(rolagem_frame, wrap=tk.WORD, font=TARGET_FONT, state=tk.DISABLED)
-        self.rolagem_text.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
-        self.rolagem_text.tag_config("positivo", foreground="blue", font=TARGET_FONT)
-        self.rolagem_text.tag_config("negativo", foreground="red", font=TARGET_FONT)
-        
-        self.rollover_context_menu = tk.Menu(self.rolagem_text, tearoff=0)
-        self.rollover_context_menu.add_command(label="Copiar basket", command=self.copy_rollover_basket_to_clipboard)
-        self.rolagem_text.bind("<Button-3>", self.show_rollover_context_menu)
-        rolagem_frame.bind("<Button-3>", self.show_rollover_context_menu)
+        # Container para os outros dois painéis
+        right_sub_pane = ttk.PanedWindow(self.bottom_paned_window, orient=tk.HORIZONTAL)
+        self.bottom_paned_window.add(right_sub_pane, weight=2) # Peso 2 (dobro da montagem)
+        self.inner_bottom_paned_window = right_sub_pane # Salvar referência
 
+        # Frame da Rolagem (dentro do sub-painel)
+        rolagem_frame = ttk.LabelFrame(right_sub_pane, text="Rolagem")
+        right_sub_pane.add(rolagem_frame, weight=2) # Peso 2
+
+        rolagem_frame.rowconfigure(1, weight=1)
+        rolagem_frame.columnconfigure(0, weight=1)
+        self.rolagem_header_label = ttk.Label(rolagem_frame, text="", font=TARGET_FONT_BOLD)
+        self.rolagem_header_label.grid(row=0, column=0, sticky="ew", padx=7, pady=(5, 2))
+        trades_cols = ('operation', 'quantity', 'price', 'financial')
+        self.rolagem_trades_tree = ttk.Treeview(rolagem_frame, columns=trades_cols, show='', style="NoBorder.Treeview", selectmode='none')
+        self.rolagem_trades_tree.grid(row=1, column=0, sticky="nsew", padx=5)
+        self.rolagem_trades_tree.column("#0", width=0, stretch=tk.NO)
+        self.rolagem_trades_tree.column("operation", width=110, anchor=tk.W)
+        self.rolagem_trades_tree.column("quantity", width=65, anchor=tk.E)
+        self.rolagem_trades_tree.column("price", width=55, anchor=tk.E)
+        self.rolagem_trades_tree.column("financial", width=110, anchor=tk.E)
+        self.rolagem_trades_tree.tag_configure('positivo', foreground='blue')
+        self.rolagem_trades_tree.tag_configure('negativo', foreground='red')
+        self.settlement_frame = ttk.Frame(rolagem_frame)
+        self.settlement_frame.grid(row=2, column=0, sticky="ew", padx=7, pady=(5, 2))
+        ttk.Label(self.settlement_frame, text="D+1:").pack(side=tk.LEFT)
+        self.d1_value_label = ttk.Label(self.settlement_frame, text="R$ 0.00", font=TARGET_FONT)
+        self.d1_value_label.pack(side=tk.LEFT, padx=(5, 20))
+        ttk.Label(self.settlement_frame, text="D+2:").pack(side=tk.LEFT)
+        self.d2_value_label = ttk.Label(self.settlement_frame, text="R$ 0.00", font=TARGET_FONT)
+        self.d2_value_label.pack(side=tk.LEFT, padx=5)
+        self.rolagem_footer_label = ttk.Label(rolagem_frame, text="", font=TARGET_FONT)
+        self.rolagem_footer_label.grid(row=3, column=0, sticky="ew", padx=7, pady=(2, 5))
+        self.rollover_context_menu = tk.Menu(rolagem_frame, tearoff=0)
+        self.rollover_context_menu.add_command(label="Copiar basket", command=self.copy_rollover_basket_to_clipboard)
+        rolagem_frame.bind("<Button-3>", self.show_rollover_context_menu)
+        self.rolagem_trades_tree.bind("<Button-3>", self.show_rollover_context_menu)
         unwind_qty_frame = ttk.Frame(rolagem_frame)
-        unwind_qty_frame.grid(row=1, column=0, sticky="ew", padx=0, pady=(5, 2))
-        
+        unwind_qty_frame.grid(row=4, column=0, sticky="ew", padx=0, pady=(5, 2))
+
+        # Frame da Posição (dentro do sub-painel)
+        self.position_frame = ttk.LabelFrame(right_sub_pane, text=f"Posição Atual ({self.current_position_key})")
+        right_sub_pane.add(self.position_frame, weight=1) # Peso 1
+
+        self.position_frame.rowconfigure(0, weight=1)
+        self.position_frame.columnconfigure(0, weight=1)
+        self.position_text = tk.Text(self.position_frame, wrap=tk.WORD, font=TARGET_FONT, state=tk.DISABLED, borderwidth=0, relief="flat")
+        self.position_text.grid(row=0, column=0, sticky='nsew', padx=5, pady=(5,0))
+        self.position_text.tag_config("positivo", foreground="blue", font=TARGET_FONT)
+        self.position_text.tag_config("negativo", foreground="red", font=TARGET_FONT)
+        # --- FIM DA ÁREA MODIFICADA COM PANEDWINDOW ---
+
         op_items_unwind = {"Ações": "0", "Calls": "0", "Puts": "0"}
         
         col_idx = 0
@@ -507,17 +547,6 @@ class OptionStrategyApp:
         goal_seek_spinbox.grid(row=1, column=col_idx, padx=2, sticky='n')
         goal_seek_spinbox.bind("<KeyRelease>", self.trigger_goal_seek)
         
-        self.position_frame = ttk.LabelFrame(bottom_text_frame, text=f"Posição Atual ({self.current_position_key})")
-        self.position_frame.grid(row=0, column=2, sticky="nsew", padx=(2, 0), pady=2)
-        
-        self.position_frame.rowconfigure(0, weight=1)
-        self.position_frame.columnconfigure(0, weight=1)
-
-        self.position_text = tk.Text(self.position_frame, wrap=tk.WORD, font=TARGET_FONT, state=tk.DISABLED)
-        self.position_text.grid(row=0, column=0, sticky='nsew', padx=5, pady=(5,0))
-        self.position_text.tag_config("positivo", foreground="blue", font=TARGET_FONT)
-        self.position_text.tag_config("negativo", foreground="red", font=TARGET_FONT)
-
         position_action_frame = ttk.Frame(self.position_frame)
         position_action_frame.grid(row=1, column=0, sticky='ew', pady=(5,5), columnspan=2)
 
@@ -582,6 +611,8 @@ class OptionStrategyApp:
 
         self.clear_plots()
 
+    # O restante do código (métodos de cálculo, etc.) permanece o mesmo...
+    # ... cole todo o restante do seu código a partir daqui ...
     def trigger_recalculation(self, event=None):
         if self._debounce_job: self.root.after_cancel(self._debounce_job)
         self._debounce_job = self.root.after(EVENT_DEBOUNCE_MS, self.on_input_change)
@@ -911,18 +942,18 @@ class OptionStrategyApp:
 
     def calculate_and_display_rollover(self):
         if not self.current_position or not self.selected_option_pair:
-            self._update_text_widget(self.rolagem_text, "Monte uma posição e selecione um novo par para simular.")
+            self.update_details_text_initial()
             return
 
         unwind_quantities = self._get_unwind_quantities()
         assembly_params = self._get_strategy_parameters()
         if not unwind_quantities or not assembly_params:
-            self._update_text_widget(self.rolagem_text, "Verifique os dados nas caixas de quantidade.")
+            self.update_details_text_initial()
             return
             
         pos, new_pair = self.current_position, self.selected_option_pair
         if pos.get('tickers', {}).get('asset') != new_pair['ativo_principal']:
-            self._update_text_widget(self.rolagem_text, "Rolagem apenas para o mesmo ativo-objeto.")
+            self.update_details_text_initial()
             return
 
         all_symbols = list(filter(None, set(list(pos.get('tickers', {}).values()) + [new_pair['ticker_call'], new_pair['ticker_put']])))
@@ -930,6 +961,13 @@ class OptionStrategyApp:
         self._display_rollover_data(new_pair, pos, unwind_quantities, assembly_params, prices)
     
     def _display_rollover_data(self, new_pair, pos, unwind_quantities, assembly_params, prices):
+        # Limpar todos os widgets de rolagem antes de preencher
+        self.rolagem_header_label.config(text="")
+        self.rolagem_trades_tree.delete(*self.rolagem_trades_tree.get_children())
+        self.d1_value_label.config(text="")
+        self.d2_value_label.config(text="")
+        self.rolagem_footer_label.config(text="")
+
         pos_call_ask = prices.get(f"{pos['tickers']['call']}_ask", 0)
         pos_put_bid = prices.get(f"{pos['tickers']['put']}_bid", 0)
         new_call_bid = prices.get(f"{new_pair['ticker_call']}_bid", 0)
@@ -937,15 +975,11 @@ class OptionStrategyApp:
         asset_ask = prices.get(f"{pos['tickers']['asset']}_ask", 0)
         asset_bid = prices.get(f"{pos['tickers']['asset']}_bid", 0)
 
-        widget = self.rolagem_text
-        widget.config(state=tk.NORMAL)
-        widget.delete(1.0, tk.END)
-
         if 0 in [pos_call_ask, pos_put_bid, new_call_bid, new_put_ask, asset_ask, asset_bid]:
-             widget.insert(tk.END, "Faltam preços de mercado para simular a rolagem.")
-             widget.config(state=tk.DISABLED)
+             self.rolagem_header_label.config(text="Faltam preços de mercado para simular.")
              return
 
+        # Cálculos financeiros (mesma lógica de antes)
         fin_recompra_call = -(unwind_quantities['call_q'] * pos_call_ask)
         fin_venda_call = assembly_params['call_q'] * new_call_bid
         fin_venda_put = unwind_quantities['put_q'] * pos_put_bid
@@ -965,43 +999,53 @@ class OptionStrategyApp:
             
         cumulative_d2_flow = d1_total + fin_asset
 
-        widget.insert(tk.END, f"Estrutura: {new_pair['ativo_principal']} -> {new_pair['ticker_call']} | {new_pair['ticker_put']}\n\n")
-        LABEL_WIDTH = 13
-        
-        def insert_line(label, qty, price, financial):
-            line = f"{label:<{LABEL_WIDTH}}|{qty:>9,}|{price:>9.2f} = "
-            widget.insert(tk.END, line)
-            widget.insert(tk.END, f"R$ {financial:,.2f}\n", "positivo" if financial >= 0 else "negativo")
+        # --- Preenchimento dos novos widgets ---
 
-        insert_line(f"(C) {pos['tickers']['call']}", unwind_quantities['call_q'], pos_call_ask, fin_recompra_call)
-        insert_line(f"(V) {new_pair['ticker_call']}", -assembly_params['call_q'], new_call_bid, fin_venda_call)
-        insert_line(f"(V) {pos['tickers']['put']}", -unwind_quantities['put_q'], pos_put_bid, fin_venda_put)
-        insert_line(f"(C) {new_pair['ticker_put']}", assembly_params['put_q'], new_put_ask, fin_compra_put)
+        # 1. Preencher Cabeçalho
+        header_text = f"{new_pair['ativo_principal']} | {new_pair['ticker_call']} | {new_pair['ticker_put']}"
+        self.rolagem_header_label.config(text=header_text)
+
+        # 2. Preencher Treeview de operações
+        def insert_trade_line(label, qty, price, financial):
+            tag = "positivo" if financial >= 0 else "negativo"
+            # Formata os valores para exibição
+            op_text = f"{label}"
+            qty_text = f"{qty:,}"
+            price_text = f"{price:.2f}"
+            financial_text = f"{financial:,}"
+            # Insere a linha na treeview
+            self.rolagem_trades_tree.insert('', 'end', values=(op_text, qty_text, price_text, financial_text), tags=(tag,))
+
+        insert_trade_line(f"(C) {pos['tickers']['call']}", unwind_quantities['call_q'], pos_call_ask, fin_recompra_call)
+        insert_trade_line(f"(V) {new_pair['ticker_call']}", -assembly_params['call_q'], new_call_bid, fin_venda_call)
+        insert_trade_line(f"(V) {pos['tickers']['put']}", -unwind_quantities['put_q'], pos_put_bid, fin_venda_put)
+        insert_trade_line(f"(C) {new_pair['ticker_put']}", assembly_params['put_q'], new_put_ask, fin_compra_put)
         
         if net_asset_q_change != 0:
             asset_op_char = 'C' if net_asset_q_change > 0 else 'V'
-            insert_line(f"({asset_op_char}) {pos['tickers']['asset']}", net_asset_q_change, asset_price_used, fin_asset)
+            insert_trade_line(f"({asset_op_char}) {pos['tickers']['asset']}", net_asset_q_change, asset_price_used, fin_asset)
 
-        widget.insert(tk.END, "\n")
-        widget.insert(tk.END, "D+1: ")
-        widget.insert(tk.END, f"R$ {d1_total:,.2f}\n", "positivo" if d1_total >= 0 else "negativo")
-        widget.insert(tk.END, "D+2: ")
-        widget.insert(tk.END, f"R$ {cumulative_d2_flow:,.2f}\n", "positivo" if cumulative_d2_flow >= 0 else "negativo")
+        # 3. Preencher Labels de D+1 e D+2
+        d1_color = "blue" if d1_total >= 0 else "red"
+        self.d1_value_label.config(text=f"R$ {d1_total:,.2f}", foreground=d1_color)
         
+        d2_color = "blue" if cumulative_d2_flow >= 0 else "red"
+        self.d2_value_label.config(text=f"R$ {cumulative_d2_flow:,.2f}", foreground=d2_color)
+
+        # 4. Preencher Rodapé
         try:
             target_profit = float(self.target_profit_var.get())
         except (ValueError, TypeError):
             target_profit = 0
 
-        custo_montagem = -(pos.get('asset_p', 0) * pos.get('asset_q', 0)) + (pos.get('call_p', 0) * pos.get('call_q', 0)) - (pos.get('put_p', 0) * pos.get('put_q', 0))
+        custo_montagem = -(pos.get('asset_p', 0) * pos.get('asset_q', 0)) + \
+                         (pos.get('call_p', 0) * pos.get('call_q', 0)) - \
+                         (pos.get('put_p', 0) * pos.get('put_q', 0))
         
         alvo_custo = abs(custo_montagem) + target_profit
         
-        widget.insert(tk.END, "\n")
-        widget.insert(tk.END, "Alvo+Custo: ")
-        widget.insert(tk.END, f"R$ {alvo_custo:,.2f}\n", "positivo")
-        
-        widget.config(state=tk.DISABLED)
+        footer_text = f"Alvo+Custo: R$ {alvo_custo:,.2f}"
+        self.rolagem_footer_label.config(text=footer_text, foreground="blue")
 
     def populate_assembly_from_current_position(self):
         if not self.current_position:
@@ -1034,7 +1078,7 @@ class OptionStrategyApp:
         call_ask = prices.get(f"{tickers.get('call')}_ask", 0)
         put_bid = prices.get(f"{tickers.get('put')}_bid", 0)
 
-        l1 = f"Estrutura: {tickers.get('asset','N/A')} | {tickers.get('call','N/A')} | {tickers.get('put','N/A')}\n"
+        l1 = f" {tickers.get('asset','N/A')} | {tickers.get('call','N/A')} | {tickers.get('put','N/A')}\n"
         try:
             exp_date, now = datetime.strptime(pos.get('expiracao', ''), '%d/%m/%Y'), datetime.now()
             cal_days = max(0, (exp_date.date() - now.date()).days)
@@ -1082,11 +1126,9 @@ class OptionStrategyApp:
         ax.set_title(title, fontsize=9)
         ax.tick_params(axis='both', which='major', labelsize=graph_font_size, colors='blue')
 
-        # >>>>>>>>>>>>>>>>>>>>>>>>> LINHAS ADICIONADAS AQUI <<<<<<<<<<<<<<<<<<<<<<<<<
         # Altera a cor da borda (spines) do gráfico para cinza
         for spine in ['top', 'bottom', 'left', 'right']:
             ax.spines[spine].set_edgecolor('gray')
-        # >>>>>>>>>>>>>>>>>>>>>>>>> FIM DA ADIÇÃO <<<<<<<<<<<<<<<<<<<<<<<<<
 
         capital_base = abs((params.get('asset_p', 0) * params.get('asset_q', 0)) -
                            (params.get('call_p', 0) * params.get('call_q', 0)) +
@@ -1183,7 +1225,7 @@ class OptionStrategyApp:
         widget = self.summary_text
         widget.config(state=tk.NORMAL)
         widget.delete(1.0, tk.END)
-        l1 = f"Estrutura: {pair['ativo_principal']} | {pair['ticker_call']} | {pair['ticker_put']}\n"
+        l1 = f" {pair['ativo_principal']} | {pair['ticker_call']} | {pair['ticker_put']}\n"
         try:
             exp_date, now = datetime.strptime(pair.get('expiracao', ''), '%d/%m/%Y'), datetime.now()
             cal_days, bus_days = max(0, (exp_date.date() - now.date()).days), np.busday_count(now.date(), exp_date.date()) if max(0, (exp_date.date() - now.date()).days) > 0 else 0
@@ -1287,7 +1329,15 @@ class OptionStrategyApp:
         widget.config(state=tk.NORMAL); widget.delete(1.0, tk.END); widget.insert(tk.END, content); widget.config(state=tk.DISABLED)
 
     def update_details_text_initial(self):
-        self._update_text_widget(self.rolagem_text, "Monte uma posição e selecione um novo par para simular.")
+        # Limpa os novos widgets de rolagem
+        if hasattr(self, 'rolagem_header_label'):
+            self.rolagem_header_label.config(text="Monte uma posição e selecione um novo par para simular.")
+            self.rolagem_trades_tree.delete(*self.rolagem_trades_tree.get_children())
+            self.d1_value_label.config(text="")
+            self.d2_value_label.config(text="")
+            self.rolagem_footer_label.config(text="")
+        
+        # Limpa o widget de sumário
         self._update_text_widget(self.summary_text, "Selecione um par de opções e preencha os dados da operação para simular.")
 
     def show_rollover_context_menu(self, event):

@@ -3,11 +3,13 @@
     "active_position_key": "T",
     "window_state": "zoomed",
     "main_pane_sash": 304,
-    "right_vertical_sash": 315,
+    "right_vertical_sash": 312,
     "treeview_columns": {
         "ticker_call": 57,
-        "ticker_put": 52,
-        "strike": 57,
-        "expiracao": 100
-    }
+        "ticker_put": 58,
+        "strike": 56,
+        "expiracao": 95
+    },
+    "bottom_pane_sash_1": 277,
+    "bottom_pane_sash_2": 350
 }
