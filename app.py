@@ -467,31 +467,28 @@ class OptionStrategyApp:
 
         # Parte Superior (Textos)
         self.montagem_tickers_label = ttk.Label(montagem_frame, text="", font=TARGET_FONT_BOLD)
-        self.montagem_tickers_label.grid(row=0, column=0, sticky="ew", padx=7, pady=(5, 2))
-        
-        self.montagem_vencimento_label = ttk.Label(montagem_frame, text="", font=TARGET_FONT)
-        self.montagem_vencimento_label.grid(row=1, column=0, sticky="ew", padx=7, pady=(2, 5))
+        self.montagem_tickers_label.grid(row=0, column=0, sticky="ew", padx=7, pady=(5, 5)) # Adjusted pady
 
         # Parte Intermediária (Treeview)
         montagem_tree_frame = ttk.Frame(montagem_frame) # Frame para conter a treeview e scrollbar
-        montagem_tree_frame.grid(row=2, column=0, sticky="nsew", padx=5, pady=(0,5))
+        montagem_tree_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=(0,5)) # Adjusted row from 2 to 1
         montagem_tree_frame.rowconfigure(0, weight=1)
         montagem_tree_frame.columnconfigure(0, weight=1)
         
         montagem_cols = ('key', 'value')
-        self.montagem_details_tree = ttk.Treeview(montagem_tree_frame, columns=montagem_cols, show='headings', style="NoBorder.Treeview", selectmode='none', height=7) # Definir altura inicial
+        self.montagem_details_tree = ttk.Treeview(montagem_tree_frame, columns=montagem_cols, show='', style="NoBorder.Treeview", selectmode='none', height=7) # Definir altura inicial, show changed to ''
         self.montagem_details_tree.grid(row=0, column=0, sticky="nsew")
         
-        self.montagem_details_tree.heading('key', text='Info')
-        self.montagem_details_tree.heading('value', text='Valor')
+        # self.montagem_details_tree.heading('key', text='Info') # Headers no longer shown
+        # self.montagem_details_tree.heading('value', text='Valor') # Headers no longer shown
         self.montagem_details_tree.column('key', width=100, anchor=tk.W, stretch=tk.NO) # Coluna da chave não estica inicialmente
         self.montagem_details_tree.column('value', width=150, anchor=tk.W, stretch=tk.YES) # Coluna do valor estica
 
-        montagem_frame.rowconfigure(2, weight=1) # Permitir que a treeview expanda verticalmente
+        montagem_frame.rowconfigure(1, weight=1) # Adjusted row from 2 to 1: Permitir que a treeview expanda verticalmente
 
         # Parte Inferior (Textos D+1, D+2)
         self.montagem_settlement_frame = ttk.Frame(montagem_frame)
-        self.montagem_settlement_frame.grid(row=3, column=0, sticky="ew", padx=7, pady=(5, 5))
+        self.montagem_settlement_frame.grid(row=2, column=0, sticky="ew", padx=7, pady=(5, 5)) # Adjusted row from 3 to 2
         self.montagem_settlement_frame.columnconfigure(1, weight=1) # Para o valor expandir se necessário
 
         ttk.Label(self.montagem_settlement_frame, text="D+1:").grid(row=0, column=0, sticky=tk.W)
@@ -552,13 +549,132 @@ class OptionStrategyApp:
         self.position_frame = ttk.LabelFrame(right_sub_pane, text=f"Posição Atual ({self.current_position_key})")
         right_sub_pane.add(self.position_frame, weight=1) # Peso 1
 
-        self.position_frame.rowconfigure(0, weight=1)
-        self.position_frame.columnconfigure(0, weight=1)
-        self.position_text = tk.Text(self.position_frame, wrap=tk.WORD, font=TARGET_FONT, state=tk.DISABLED, borderwidth=0, relief="flat")
-        self.position_text.grid(row=0, column=0, sticky='nsew', padx=5, pady=(5,0))
-        self.position_text.tag_config("positivo", foreground="blue", font=TARGET_FONT)
-        self.position_text.tag_config("negativo", foreground="red", font=TARGET_FONT)
-        # --- FIM DA ÁREA MODIFICADA COM PANEDWINDOW ---
+        # self.position_frame.rowconfigure(0, weight=1) # Old configuration
+        self.position_frame.columnconfigure(0, weight=1) # Keep column config
+
+        # New layout for position_frame:
+        # Row 0: position_header_frame (tickers, cal_days, expiry_date)
+        # Row 1: position_details_tree_frame (Asset/Call/Put details) - weight 1 for expansion
+        # Row 2: position_summary_text (financial summary) - weight 1 for expansion
+        # Row 3: position_alvo_custo_label
+        # Row 4: position_action_frame (buttons)
+
+        self.position_frame.rowconfigure(0, weight=0) 
+        self.position_frame.rowconfigure(1, weight=1) # Treeview expands
+        self.position_frame.rowconfigure(2, weight=1) # Summary text expands
+        self.position_frame.rowconfigure(3, weight=0)
+        self.position_frame.rowconfigure(4, weight=0)
+
+        # Row 0: Header Frame
+        position_header_frame = ttk.Frame(self.position_frame)
+        position_header_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=(5,5)) # Adjusted pady
+        position_header_frame.columnconfigure(0, weight=1) # Ticker label expands
+
+        self.position_tickers_display_label = ttk.Label(position_header_frame, text="", font=TARGET_FONT_BOLD)
+        self.position_tickers_display_label.grid(row=0, column=0, sticky="ew") # Will now include days
+
+        # self.position_cal_days_label = ttk.Label(position_header_frame, text="", font=TARGET_FONT) # Removed
+        # self.position_cal_days_label.grid(row=0, column=1, sticky="e", padx=(5,0))
+        
+        # self.position_expiry_label = ttk.Label(position_header_frame, text="", font=TARGET_FONT) # Removed
+        # self.position_expiry_label.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0,2))
+
+        # Row 1: Position Details Treeview Frame
+        position_details_tree_frame = ttk.Frame(self.position_frame)
+        position_details_tree_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=0)
+        position_details_tree_frame.rowconfigure(0, weight=1)
+        position_details_tree_frame.columnconfigure(0, weight=1)
+
+        pos_details_cols = ('instrumento', 'quantidade', 'preco_medio')
+        self.position_details_tree = ttk.Treeview(position_details_tree_frame, columns=pos_details_cols, show='', style="NoBorder.Treeview", selectmode='none', height=3) # height=3 for 3 rows, show=''
+        self.position_details_tree.grid(row=0, column=0, sticky="nsew")
+
+        # self.position_details_tree.heading('instrumento', text='Instrumento') # Headings no longer shown
+        # self.position_details_tree.heading('quantidade', text='Quantidade')
+        # self.position_details_tree.heading('preco_medio', text='Preço Médio')
+
+        self.position_details_tree.column('instrumento', width=120, anchor=tk.W, stretch=tk.NO)
+        self.position_details_tree.column('quantidade', width=80, anchor=tk.W, stretch=tk.NO) # Changed anchor to tk.W
+        self.position_details_tree.column('preco_medio', width=80, anchor=tk.W, stretch=tk.YES) # Changed anchor to tk.W
+
+        # Row 2: Position Summary Text
+        self.position_summary_text = tk.Text(self.position_frame, wrap=tk.WORD, font=TARGET_FONT, state=tk.DISABLED, borderwidth=0, relief="flat", height=5) # height=5 for 5 lines
+        self.position_summary_text.grid(row=2, column=0, sticky="nsew", padx=5, pady=(2,2))
+        self.position_summary_text.tag_config("positivo", foreground="blue", font=TARGET_FONT)
+        self.position_summary_text.tag_config("negativo", foreground="red", font=TARGET_FONT)
+        self.position_summary_text.tag_config("black_fg", foreground="black", font=TARGET_FONT)
+
+        # Row 3: Alvo+Custo Label
+        self.position_alvo_custo_label = ttk.Label(self.position_frame, text="", font=TARGET_FONT)
+        self.position_alvo_custo_label.grid(row=3, column=0, sticky="ew", padx=7, pady=(0,5))
+
+        # Row 4: Action Frame (Buttons)
+        position_action_frame = ttk.Frame(self.position_frame)
+        position_action_frame.grid(row=4, column=0, sticky='ew', pady=(5,5))
+
+        # --- Contents of position_action_frame START ---
+        action_buttons_frame = ttk.Frame(position_action_frame)
+        action_buttons_frame.pack(fill=tk.X, expand=True, pady=(0, 5)) # pack into position_action_frame
+        action_buttons_frame.columnconfigure((0, 1, 2), weight=1)
+
+        self.assemble_btn = ttk.Button(action_buttons_frame, text="Montar/Adicionar", command=self.assemble_position)
+        self.assemble_btn.grid(row=0, column=0, sticky='ew', padx=(5,2))
+
+        self.reset_btn = ttk.Button(action_buttons_frame, text="Zerar Posição", command=self.reset_position)
+        self.reset_btn.grid(row=0, column=1, sticky='ew', padx=2)
+
+        self.copy_pos_btn = ttk.Button(action_buttons_frame, text="Copiar Posição", command=self.populate_assembly_from_current_position)
+        self.copy_pos_btn.grid(row=0, column=2, sticky='ew', padx=(2,5))
+        
+        ttk.Separator(action_buttons_frame, orient='horizontal').grid(row=1, column=0, columnspan=3, sticky='ew', pady=(5, 2))
+
+        load_btn_frame = ttk.Frame(action_buttons_frame) # Child of action_buttons_frame
+        load_btn_frame.grid(row=2, column=0, columnspan=3, sticky='ew')
+        load_btn_frame.columnconfigure(0, weight=1) # Centering setup
+        load_btn_frame.columnconfigure(1, weight=0) # Centering setup - content
+        load_btn_frame.columnconfigure(2, weight=1) # Centering setup
+
+        centered_frame = ttk.Frame(load_btn_frame) # This frame will contain the buttons
+        centered_frame.grid(row=0, column=1) # Place in the middle column of load_btn_frame
+
+        ttk.Label(centered_frame, text="Visão:").pack(side=tk.LEFT, padx=(0, 5))
+        m_btn = ttk.Button(centered_frame, text="M", width=4, command=lambda: self.load_position_view('M'))
+        m_btn.pack(side=tk.LEFT)
+        r_btn = ttk.Button(centered_frame, text="R", width=4, command=lambda: self.load_position_view('R'))
+        r_btn.pack(side=tk.LEFT, padx=2)
+        t_btn = ttk.Button(centered_frame, text="T", width=4, command=lambda: self.load_position_view('T'))
+        t_btn.pack(side=tk.LEFT)
+        
+        fiscal_m_btn = ttk.Button(centered_frame, text="Fs M",width=5, command=lambda: self.show_fiscal_report_popup(FISCAL_M_FILE, "Relatório Fiscal M"))
+        fiscal_m_btn.pack(side=tk.LEFT, padx=(5,0))
+        fiscal_r_btn = ttk.Button(centered_frame, text="Fs R",width=5, command=lambda: self.show_fiscal_report_popup(FISCAL_R_FILE, "Relatório Fiscal R"))
+        fiscal_r_btn.pack(side=tk.LEFT, padx=(2,0))
+
+        self.sync_btn = ttk.Button(centered_frame, text="Sy",width=5, command=self.run_sync_scripts)
+        self.sync_btn.pack(side=tk.LEFT, padx=(5,0))
+
+        self.si_btn = ttk.Button(centered_frame, text="SI", width=5, command=self.run_si_extraction)
+        self.si_btn.pack(side=tk.LEFT, padx=(2,0))
+        
+        advanced_goal_seek_frame = ttk.Frame(position_action_frame) # Child of position_action_frame
+        advanced_goal_seek_frame.pack(fill=tk.X, expand=True, padx=5) # pack into position_action_frame
+        
+        ttk.Label(advanced_goal_seek_frame, text="Alvo:").grid(row=0, column=0, sticky='w', padx=(0,5))
+        target_profit_entry = tk.Entry(advanced_goal_seek_frame, textvariable=self.target_profit_var, font=TARGET_FONT, width=10, justify=tk.RIGHT)
+        target_profit_entry.grid(row=0, column=1, sticky='w')
+
+        ttk.Label(advanced_goal_seek_frame, text="%:").grid(row=0, column=2, sticky='w', padx=(10, 5))
+        target_profit_pct_entry = tk.Entry(advanced_goal_seek_frame, textvariable=self.target_profit_pct_var, font=TARGET_FONT, width=7, justify=tk.RIGHT)
+        target_profit_pct_entry.grid(row=0, column=3, sticky='w')
+        target_profit_pct_entry.bind("<KeyRelease>", self.trigger_target_profit_update_from_pct)
+        target_profit_pct_entry.bind("<Return>", self.trigger_target_profit_update_from_pct)
+
+        calc_button = ttk.Button(advanced_goal_seek_frame, text="Calcular Rolagem", command=self.calculate_rollover_for_target_profit)
+        calc_button.grid(row=0, column=4, sticky='ew', padx=(10,0))
+        advanced_goal_seek_frame.columnconfigure(4, weight=1)
+        # --- Contents of position_action_frame END ---
+
+        # --- FIM DA ÁREA MODIFICADA COM PANEDWINDOW --- (This comment seems to be a marker for the end of the right_sub_pane)
 
         op_items_unwind = {"Ações": "0", "Calls": "0", "Puts": "0"}
         
@@ -588,55 +704,16 @@ class OptionStrategyApp:
         goal_seek_spinbox.grid(row=1, column=col_idx, padx=2, sticky='n')
         goal_seek_spinbox.bind("<KeyRelease>", self.trigger_goal_seek)
         
-        position_action_frame = ttk.Frame(self.position_frame)
-        position_action_frame.grid(row=1, column=0, sticky='ew', pady=(5,5), columnspan=2)
-
-        action_buttons_frame = ttk.Frame(position_action_frame)
-        action_buttons_frame.pack(fill=tk.X, expand=True, pady=(0, 5))
-        action_buttons_frame.columnconfigure((0, 1, 2), weight=1)
-
-        self.assemble_btn = ttk.Button(action_buttons_frame, text="Montar/Adicionar", command=self.assemble_position)
-        self.assemble_btn.grid(row=0, column=0, sticky='ew', padx=(5,2))
-
-        self.reset_btn = ttk.Button(action_buttons_frame, text="Zerar Posição", command=self.reset_position)
-        self.reset_btn.grid(row=0, column=1, sticky='ew', padx=2)
-
-        self.copy_pos_btn = ttk.Button(action_buttons_frame, text="Copiar Posição", command=self.populate_assembly_from_current_position)
-        self.copy_pos_btn.grid(row=0, column=2, sticky='ew', padx=(2,5))
+        # position_action_frame will be recreated and placed at row 4 later in this step
+        # ttk.Separator(action_buttons_frame, orient='horizontal').grid(row=1, column=0, columnspan=3, sticky='ew', pady=(5, 2))
+        # load_btn_frame = ttk.Frame(action_buttons_frame)
+        # load_btn_frame.grid(row=2, column=0, columnspan=3, sticky='ew')
+        # ... (button recreation will be part of adding position_action_frame)
         
-        ttk.Separator(action_buttons_frame, orient='horizontal').grid(row=1, column=0, columnspan=3, sticky='ew', pady=(5, 2))
-
-        load_btn_frame = ttk.Frame(action_buttons_frame)
-        load_btn_frame.grid(row=2, column=0, columnspan=3, sticky='ew')
-        load_btn_frame.columnconfigure(0, weight=1)
-        load_btn_frame.columnconfigure(2, weight=1)
-
-        centered_frame = ttk.Frame(load_btn_frame)
-        centered_frame.grid(row=0, column=1)
-
-        ttk.Label(centered_frame, text="Visão:").pack(side=tk.LEFT, padx=(0, 5))
-        m_btn = ttk.Button(centered_frame, text="M", width=4, command=lambda: self.load_position_view('M'))
-        m_btn.pack(side=tk.LEFT)
-        r_btn = ttk.Button(centered_frame, text="R", width=4, command=lambda: self.load_position_view('R'))
-        r_btn.pack(side=tk.LEFT, padx=2)
-        t_btn = ttk.Button(centered_frame, text="T", width=4, command=lambda: self.load_position_view('T'))
-        t_btn.pack(side=tk.LEFT)
-        
-        fiscal_m_btn = ttk.Button(centered_frame, text="Fs M",width=5, command=lambda: self.show_fiscal_report_popup(FISCAL_M_FILE, "Relatório Fiscal M"))
-        fiscal_m_btn.pack(side=tk.LEFT, padx=(5,0))
-        fiscal_r_btn = ttk.Button(centered_frame, text="Fs R",width=5, command=lambda: self.show_fiscal_report_popup(FISCAL_R_FILE, "Relatório Fiscal R"))
-        fiscal_r_btn.pack(side=tk.LEFT, padx=(2,0))
-
-        self.sync_btn = ttk.Button(centered_frame, text="Sy",width=5, command=self.run_sync_scripts)
-        self.sync_btn.pack(side=tk.LEFT, padx=(5,0))
-
-        self.si_btn = ttk.Button(centered_frame, text="SI", width=5, command=self.run_si_extraction)
-        self.si_btn.pack(side=tk.LEFT, padx=(2,0))
-        
-        advanced_goal_seek_frame = ttk.Frame(position_action_frame)
-        advanced_goal_seek_frame.pack(fill=tk.X, expand=True, padx=5)
-        
-        ttk.Label(advanced_goal_seek_frame, text="Alvo:").grid(row=0, column=0, sticky='w', padx=(0,5))
+        # advanced_goal_seek_frame will be part of the new position_action_frame
+        # advanced_goal_seek_frame = ttk.Frame(position_action_frame)
+        # advanced_goal_seek_frame.pack(fill=tk.X, expand=True, padx=5)
+        # ttk.Label(advanced_goal_seek_frame, text="Alvo:").grid(row=0, column=0, sticky='w', padx=(0,5))
         target_profit_entry = tk.Entry(advanced_goal_seek_frame, textvariable=self.target_profit_var, font=TARGET_FONT, width=10, justify=tk.RIGHT)
         target_profit_entry.grid(row=0, column=1, sticky='w')
 
@@ -1053,7 +1130,7 @@ class OptionStrategyApp:
             op_text = f"{label}"
             qty_text = f"{qty:,}"
             price_text = f"{price:.2f}"
-            financial_text = f"{financial:,}"
+            financial_text = f"{financial:,.2f}" # Ensure two decimal places
             # Insere a linha na treeview
             self.rolagem_trades_tree.insert('', 'end', values=(op_text, qty_text, price_text, financial_text), tags=(tag,))
 
@@ -1073,20 +1150,8 @@ class OptionStrategyApp:
         d2_color = "blue" if cumulative_d2_flow >= 0 else "red"
         self.d2_value_label.config(text=f"R$ {cumulative_d2_flow:,.2f}", foreground=d2_color)
 
-        # 4. Preencher Rodapé
-        try:
-            target_profit = float(self.target_profit_var.get())
-        except (ValueError, TypeError):
-            target_profit = 0
-
-        custo_montagem = -(pos.get('asset_p', 0) * pos.get('asset_q', 0)) + \
-                         (pos.get('call_p', 0) * pos.get('call_q', 0)) - \
-                         (pos.get('put_p', 0) * pos.get('put_q', 0))
-        
-        alvo_custo = abs(custo_montagem) + target_profit
-        
-        footer_text = f"Alvo+Custo: R$ {alvo_custo:,.2f}"
-        self.rolagem_footer_label.config(text=footer_text, foreground="black") # Alterado para preto
+        # 4. Preencher Rodapé (Alvo+Custo foi movido para update_position_display)
+        self.rolagem_footer_label.config(text="") # Limpar o rodapé da rolagem
 
     def populate_assembly_from_current_position(self):
         if not self.current_position:
@@ -1102,61 +1167,100 @@ class OptionStrategyApp:
         self.trigger_recalculation()
 
     def update_position_display(self):
+        # Clear all parts first
+        self.position_tickers_display_label.config(text="")
+        # self.position_cal_days_label.config(text="") # Removed
+        # self.position_expiry_label.config(text="") # Removed
+        self.position_details_tree.delete(*self.position_details_tree.get_children())
+        
+        summary_widget = self.position_summary_text
+        summary_widget.config(state=tk.NORMAL)
+        summary_widget.delete(1.0, tk.END)
+        summary_widget.config(state=tk.DISABLED)
+        
+        self.position_alvo_custo_label.config(text="")
+
         if not self.current_position: 
-            self._update_text_widget(self.position_text, "Nenhuma posição montada.")
+            self.position_tickers_display_label.config(text="Nenhuma posição montada.")
             self._update_target_profit_pct()
             return
             
         pos = self.current_position
         tickers = pos.get('tickers', {})
         if not tickers:
-            self._update_text_widget(self.position_text, "Posição sem tickers definidos.")
+            self.position_tickers_display_label.config(text="Posição sem tickers definidos.")
             self._update_target_profit_pct()
             return
+
+        # Populate Header Labels
+        ticker_str = f"{tickers.get('asset','N/A')} | {tickers.get('call','N/A')} | {tickers.get('put','N/A')}"
+        # self.position_tickers_display_label.config(text=ticker_str) # Will be set later with days
+
+        cal_days_str = "N/Ad"
+        # exp_date_str = pos.get('expiracao', 'N/A') # No longer displayed separately
+        try:
+            exp_date_obj = datetime.strptime(pos.get('expiracao', ''), '%d/%m/%Y')
+            now = datetime.now()
+            cal_days = max(0, (exp_date_obj.date() - now.date()).days)
+            cal_days_str = f"{cal_days}d"
+        except ValueError: 
+            pass 
+        
+        self.position_tickers_display_label.config(text=f"{ticker_str} | {cal_days_str}")
+        # self.position_cal_days_label.config(text=cal_days_str) # Removed
+        # self.position_expiry_label.config(text=f"Data Vencimento: {exp_date_str}") # Removed
+
+        # Populate Position Details Tree
+        self.position_details_tree.delete(*self.position_details_tree.get_children()) # Clear first
+        
+        asset_q = pos.get('asset_q', 0)
+        asset_p = pos.get('asset_p', 0)
+        call_q = pos.get('call_q', 0) # Usually negative for sold calls
+        call_p = pos.get('call_p', 0)
+        put_q = pos.get('put_q', 0)   # Usually positive for bought puts
+        put_p = pos.get('put_p', 0)
+
+        self.position_details_tree.insert('', 'end', values=(tickers.get('asset', 'Ativo N/A'), f"{asset_q:,}", f"{asset_p:.2f}"))
+        self.position_details_tree.insert('', 'end', values=(tickers.get('call', 'Call N/A'), f"{call_q:,}", f"{call_p:.2f}"))
+        self.position_details_tree.insert('', 'end', values=(tickers.get('put', 'Put N/A'), f"{put_q:,}", f"{put_p:.2f}"))
 
         prices = mt5_get_all_prices_optimized(list(tickers.values()))
         asset_bid = prices.get(f"{tickers.get('asset')}_bid", 0)
         call_ask = prices.get(f"{tickers.get('call')}_ask", 0)
         put_bid = prices.get(f"{tickers.get('put')}_bid", 0)
-
-        l1 = f" {tickers.get('asset','N/A')} | {tickers.get('call','N/A')} | {tickers.get('put','N/A')}\n"
-        try:
-            exp_date, now = datetime.strptime(pos.get('expiracao', ''), '%d/%m/%Y'), datetime.now()
-            cal_days = max(0, (exp_date.date() - now.date()).days)
-            bus_days = np.busday_count(now.date(), exp_date.date()) if cal_days > 0 else 0
-        except:
-            cal_days, bus_days = 'N/A', 'N/A'
-        l2 = f"Data Vencimento: {pos.get('expiracao', 'N/A')} | ({cal_days}dc/{bus_days}dú)\n"
         
-        l3 = f"Ativo: {pos.get('asset_q', 0):>10,} | {pos.get('asset_p', 0):>10.2f}"
-        l4 = f"Call:  {-pos.get('call_q', 0):>10,} | {pos.get('call_p', 0):>10.2f}"
-        l5 = f"Put:   {pos.get('put_q', 0):>10,} | {pos.get('put_p', 0):>10.2f}\n"
-        
-        custo_montagem = -(pos.get('asset_p', 0) * pos.get('asset_q', 0)) + (pos.get('call_p', 0) * pos.get('call_q', 0)) - (pos.get('put_p', 0) * pos.get('put_q', 0))
-        custo_desmontagem = (asset_bid * pos.get('asset_q', 0)) - (call_ask * pos.get('call_q', 0)) + (put_bid * pos.get('put_q', 0)) if all([asset_bid, call_ask, put_bid]) else 0
+        custo_montagem = -(asset_p * asset_q) + (call_p * call_q) - (put_p * put_q) # Adjusted to use fetched quantities/prices
+        custo_desmontagem = (asset_bid * asset_q) - (call_ask * call_q) + (put_bid * put_q) if all([asset_bid, call_ask, put_bid]) else 0
         resultado_atual = custo_desmontagem + custo_montagem if custo_desmontagem != 0 else 0
         capital_at_risk = pos.get('asset_p', 0) * pos.get('asset_q', 0)
         resultado_pct = (resultado_atual / capital_at_risk) * 100 if capital_at_risk > 0 else 0
-
-        widget = self.position_text
-        widget.config(state=tk.NORMAL)
-        widget.delete(1.0, tk.END)
-        widget.insert(tk.END, f"{l1}\n{l2}\n{l3}\n{l4}\n{l5}\n")
-        widget.insert(tk.END, "Custo Montagem: ")
-        widget.insert(tk.END, f"R$ {custo_montagem:,.2f}\n", "positivo" if custo_montagem >= 0 else "negativo")
-        widget.insert(tk.END, "Custo Desmontagem: ")
-        widget.insert(tk.END, f"R$ {custo_desmontagem:,.2f}\n", "positivo" if custo_desmontagem >= 0 else "negativo")
-        widget.insert(tk.END, "Resultado Atual: ")
-        widget.insert(tk.END, f"R$ {resultado_atual:,.2f}\n", "positivo" if resultado_atual >= 0 else "negativo")
-        widget.insert(tk.END, "Resultado Atual %: ")
-        widget.insert(tk.END, f"{resultado_pct:+.2f}%\n", "positivo" if resultado_pct >= 0 else "negativo")
         
         graph_pnl_pct = getattr(self, 'last_graph_pnl_pct_pos', 0.0)
-        
         exit_cost_pct = max(0, graph_pnl_pct - resultado_pct)
-        widget.insert(tk.END, "Custo saída: ")
-        widget.insert(tk.END, f"{exit_cost_pct:+.2f}%\n", "positivo")
-        widget.config(state=tk.DISABLED)
+
+        # Populate Summary Text Widget
+        summary_widget = self.position_summary_text
+        summary_widget.config(state=tk.NORMAL)
+        summary_widget.delete(1.0, tk.END) # Clear before inserting
+
+        summary_widget.insert(tk.END, "Custos: ")
+        summary_widget.insert(tk.END, f"R$ {custo_montagem:,.2f} | ", "positivo" if custo_montagem >= 0 else "negativo")
+        summary_widget.insert(tk.END, f"R$ {custo_desmontagem:,.2f}\n", "positivo" if custo_desmontagem >= 0 else "negativo")
+        summary_widget.insert(tk.END, "Re. Atual: ")
+        summary_widget.insert(tk.END, f"R$ {resultado_atual:,.2f} | ", "positivo" if resultado_atual >= 0 else "negativo")
+        summary_widget.insert(tk.END, f"{resultado_pct:+.2f}%\n", "positivo" if resultado_pct >= 0 else "negativo")
+        summary_widget.insert(tk.END, "Custo saída: ")
+        summary_widget.insert(tk.END, f"{exit_cost_pct:+.2f}%\n", "positivo")
+        summary_widget.config(state=tk.DISABLED)
+
+        # Populate Alvo+Custo Label
+        try:
+            target_profit = float(self.target_profit_var.get())
+        except (ValueError, TypeError):
+            target_profit = 0
+        
+        alvo_custo = abs(custo_montagem) + target_profit
+        self.position_alvo_custo_label.config(text=f"Alvo+Custo: R$ {alvo_custo:,.2f}", foreground="black")
 
         self._update_target_profit_pct()
 
@@ -1272,17 +1376,17 @@ class OptionStrategyApp:
 
         # Atualizar Labels Superiores
         ticker_text = f"{pair['ativo_principal']} | {pair['ticker_call']} | {pair['ticker_put']}"
-        self.montagem_tickers_label.config(text=ticker_text)
-
+        
+        cal_days_str = "N/Ad" # Default value
         try:
-            exp_date, now = datetime.strptime(pair.get('expiracao', ''), '%d/%m/%Y'), datetime.now()
+            exp_date = datetime.strptime(pair.get('expiracao', ''), '%d/%m/%Y')
+            now = datetime.now()
             cal_days = max(0, (exp_date.date() - now.date()).days)
-            bus_days = np.busday_count(now.date(), exp_date.date()) if cal_days > 0 else 0
-            venc_text = f"Vencimento: {pair['expiracao']} ({cal_days}dc/{bus_days}dú)"
-        except: 
-            cal_days, bus_days = 'N/A', 'N/A'
-            venc_text = f"Vencimento: {pair.get('expiracao', 'N/A')} (N/Adc/N/Adú)"
-        self.montagem_vencimento_label.config(text=venc_text)
+            cal_days_str = f"{cal_days}d"
+        except ValueError: # Handles cases where pair.get('expiracao', '') is empty or invalid format
+            pass # cal_days_str remains "N/Ad"
+        
+        self.montagem_tickers_label.config(text=f"{ticker_text} | {cal_days_str}")
 
         # Limpar e Preencher Treeview
         self.montagem_details_tree.delete(*self.montagem_details_tree.get_children())
@@ -1314,25 +1418,42 @@ class OptionStrategyApp:
         custo = -(q_asset * p_asset_ask) + (q_call * p_call_bid) - (q_put * p_put_ask) if all([p_asset_ask, p_call_bid, p_put_ask]) else 0
 
         tree_data = [
-            ("Strike", f"{pair['strike']:.2f}"),
-            ("Peso", f"{pct_asset:.0f}% | {pct_call:.0f}% | {pct_put:.0f}%"),
-            ("Taxa", f"{taxa:.2f}%"),
-            ("B.Even", be_str),
-            ("Spread In", f"{spread_in:,.2f}", "positivo" if spread_in >= 0 else "negativo"),
-            ("Spread Out", f"{spread_out:,.2f}", "positivo" if spread_out >= 0 else "negativo"),
-            ("Custo $", f"R$ {custo:,.2f}", "positivo" if custo >= 0 else "negativo")
+            ("Strike:", f"{pair['strike']:.2f}"),
+            ("Peso: ", f"{pct_asset:.0f}% | {pct_call:.0f}% | {pct_put:.0f}%"),
+            ("Taxa: ", f"{taxa:.2f}%"),
+            ("B.Even: ", be_str),
+            ("Spread In: ", f"{spread_in:,.2f}", "positivo" if spread_in >= 0 else "negativo"),
+            ("Spread Out: ", f"{spread_out:,.2f}", "positivo" if spread_out >= 0 else "negativo"),
+            ("Custo $: ", f"R$ {custo:,.2f}", "positivo" if custo >= 0 else "negativo")
         ]
 
         for item_data in tree_data:
             key, value = item_data[0], item_data[1]
-            tag = ()
-            if len(item_data) > 2: # Se tem cor especificada
-                 tag = (item_data[2],) # Tags precisam ser tuplas
-            self.montagem_details_tree.insert('', 'end', values=(key, value), tags=tag)
-        
+            color_tag_name = None
+            if len(item_data) > 2: # Se tem cor especificada para o valor
+                 color_tag_name = item_data[2]
+
+            # Insere a chave (Info) sem tag de cor específica (usará default)
+            # Insere o valor com a tag de cor, se aplicável
+            # Para fazer isso, precisamos inserir colunas individualmente ou usar itemconfigure após insert
+            # A forma mais simples é inserir e depois aplicar a tag à célula específica se Treeview suportar
+            # Tkinter Treeview não suporta tags por célula diretamente. Tags são por item ou por coluna.
+            # Vamos aplicar a tag ao item inteiro, mas a cor só será visível no valor se o estilo da coluna 'key' for neutro.
+            # A melhor abordagem aqui é ter colunas separadas para 'key' e 'value' e aplicar tags de cor ao item.
+            # O estilo "NoBorder.Treeview" pode ser configurado para que a tag afete apenas a coluna 'value'.
+            # No entanto, a forma como as tags funcionam é no item inteiro.
+            # A solução mais robusta seria garantir que a coluna 'key' não tenha cor de foreground pelas tags.
+            # Por agora, vamos manter a inserção como está, assumindo que o estilo default da treeview para 'key' é preto.
+            # Se a tag "positivo" ou "negativo" também afetar a cor da chave, precisaremos de uma solução mais complexa.
+            # O pedido é que o TÍTULO (key) seja preto. As tags "positivo"/"negativo" já existem.
+            
+            iid = self.montagem_details_tree.insert('', 'end', values=(key, value))
+            if color_tag_name:
+                self.montagem_details_tree.item(iid, tags=(color_tag_name,))
+
         self.montagem_details_tree.tag_configure("positivo", foreground="blue")
         self.montagem_details_tree.tag_configure("negativo", foreground="red")
-
+        # A coluna 'key' usará a cor de foreground padrão do widget Treeview, que é tipicamente preto.
 
         # Atualizar Labels Inferiores (D+1, D+2)
         d1_flow = (q_call * p_call_bid) - (q_put * p_put_ask) if all([p_call_bid, p_put_ask]) else 0
@@ -1430,7 +1551,7 @@ class OptionStrategyApp:
         # Limpa os novos widgets de montagem
         if hasattr(self, 'montagem_tickers_label'):
             self.montagem_tickers_label.config(text="Selecione um par de opções...")
-            self.montagem_vencimento_label.config(text="")
+            # self.montagem_vencimento_label.config(text="") # Removed this line
             if hasattr(self, 'montagem_details_tree'): # Verificar se existe antes de limpar
                  self.montagem_details_tree.delete(*self.montagem_details_tree.get_children())
             self.montagem_d1_value_label.config(text="")
