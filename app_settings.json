@@ -5,11 +5,11 @@
     "main_pane_sash": 185,
     "right_vertical_sash": 344,
     "treeview_columns": {
-        "ticker_call": 37,
+        "ticker_call": 38,
         "ticker_put": 21,
-        "strike": 25,
+        "strike": 24,
         "expiracao": 69
     },
-    "bottom_pane_sash_1": 509,
-    "bottom_pane_sash_2": 398
+    "bottom_pane_sash_1": 309,
+    "bottom_pane_sash_2": 559
 }
