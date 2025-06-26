@@ -1030,6 +1030,7 @@ class OptionStrategyApp:
         
         simulated_assembly_params = self._get_strategy_parameters()
         self._display_rollover_data(new_pair, pos, unwind_quantities, simulated_assembly_params, future_prices)
+        self.update_position_display() # Ensure Alvo+Custo is updated
         
     def _calculate_rollover_d2_flow_with_prices(self, assembly_params, unwind_quantities, prices, current_pos):
         pos_call_ask = prices.get(f"{current_pos['tickers']['call']}_ask")
