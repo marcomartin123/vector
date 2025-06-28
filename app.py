@@ -14,6 +14,8 @@ import subprocess
 import threading  
 import sys        
 import zipfile
+import ctypes
+from ctypes import wintypes
 
 CSV_FILE_PATH = 'base.csv'
 APP_TITLE = "Vector Profit Strategy"
@@ -25,6 +27,33 @@ FISCAL_R_FILE = 'fiscal_r.json'
 TARGET_FONT = ('MS Reference Sans Serif', 8)
 TARGET_FONT_BOLD = ('MS Reference Sans Serif', 8,'bold')
 EVENT_DEBOUNCE_MS = 300
+
+def setup_taskbar_icon():
+    """Configura o ícone para aparecer corretamente na barra de tarefas do Windows"""
+    try:
+        # import ctypes # Imports já estão no topo do arquivo
+        # from ctypes import wintypes
+        
+        # Define um ID único para a aplicação
+        app_id = 'VectorProfit.OptionStrategy.1.0'
+        
+        # Tenta diferentes métodos para garantir que funcione
+        try:
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+        except Exception: # Captura genérica para evitar falha se shell32 não estiver disponível ou outros erros
+            pass
+            
+        # Método alternativo usando kernel32
+        try:
+            kernel32 = ctypes.windll.kernel32
+            kernel32.SetConsoleTitleW(APP_TITLE) # Usar SetConsoleTitleW para unicode
+        except Exception: # Captura genérica
+            pass
+            
+        return True
+    except Exception as e:
+        print(f"Erro ao configurar ícone da barra de tarefas: {e}")
+        return False
 
 def mt5_connect():
     if not mt5.initialize():
@@ -82,6 +111,15 @@ class OptionStrategyApp:
         self.root.title(APP_TITLE)
         self.root.geometry("1200x750")
 
+        # CRÍTICO: Configurar antes de qualquer outra coisa
+        setup_taskbar_icon()
+
+        # Forçar aparição na barra de tarefas
+        self.root.withdraw()  # Esconde temporariamente
+        self.root.update_idletasks()
+        self.root.deiconify()  # Mostra novamente
+        self.root.focus_force()
+
         self.df_options, self.current_asset_price, self.selected_option_pair = None, None, None
         self.mt5_prices, self.current_position, self.tree_item_map = {}, {}, {}
         self.ax_left, self.ax_right = None, None
@@ -115,6 +153,9 @@ class OptionStrategyApp:
         self.load_position_view(self.current_position_key)
         self.auto_load_initial_asset()
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
+        # Último recurso para forçar aparição
+        self.root.after(100, self._force_taskbar_icon)
 
     def _get_current_assembly_cost(self):
         if not self.current_position:
@@ -179,6 +220,17 @@ class OptionStrategyApp:
         style.layout("NoBorder.Treeview", [('Treeview.treearea', {'sticky': 'nswe'})])
         style.configure("NoBorder.Treeview.Heading", font=TARGET_FONT)
         
+        # Configurar ícone PRIMEIRO
+        try: 
+            self.root.iconbitmap('icon.ico')
+            # Forçar atualização
+            self.root.update()
+            self.root.lift()
+            self.root.attributes('-topmost', True)
+            self.root.after_idle(self.root.attributes, '-topmost', False)
+        except tk.TclError: 
+            print("Aviso: 'icon.ico' não encontrado.")
+
         self.root.option_add("*TCombobox*Listbox*Font", TARGET_FONT)
         plt.rcParams.update({'font.size': 9, 'axes.titlesize': 8,'font.family': 'MS Reference Sans Serif'})
 
@@ -366,7 +418,8 @@ class OptionStrategyApp:
         elif "window_geometry" in settings: self.root.geometry(settings["window_geometry"])
         self.asset_combo.set(settings.get("selected_asset", "PETR4"))
         self.root.update_idletasks()
-        self.root.after_idle(self._apply_layout_settings, settings)
+        # Alterado de after_idle para after(100) conforme a solução do usuário
+        self.root.after(100, self._apply_layout_settings, settings)
 
     def _apply_layout_settings(self, settings):
         if not settings: return
@@ -379,8 +432,12 @@ class OptionStrategyApp:
         }
         for key, pane in sash_map.items():
             if pane and key in settings and hasattr(pane, 'winfo_exists') and pane.winfo_exists():
-                try: pane.sashpos(0, settings[key])
-                except tk.TclError: pass
+                sash_value = settings[key]
+                if isinstance(sash_value, (int, float)) and sash_value > 10: # Validação adicionada
+                    try:
+                        pane.sashpos(0, int(sash_value))
+                    except tk.TclError:
+                        pass # Erro ao aplicar sashpos é ignorado
 
         if "treeview_columns" in settings and self.tree.winfo_exists():
             for col_id, width in settings["treeview_columns"].items():
@@ -460,7 +517,7 @@ class OptionStrategyApp:
 
         # Frame da Montagem (primeiro painel)
         montagem_frame = ttk.LabelFrame(self.bottom_paned_window, text="Montagem")
-        self.bottom_paned_window.add(montagem_frame, weight=1) # Peso 1
+        self.bottom_paned_window.add(montagem_frame) # Peso 1 REMOVIDO
 
         # --- Nova estrutura para Montagem ---
         montagem_frame.columnconfigure(0, weight=1) # Permitir que a treeview expanda
@@ -502,12 +559,12 @@ class OptionStrategyApp:
 
         # Container para os outros dois painéis
         right_sub_pane = ttk.PanedWindow(self.bottom_paned_window, orient=tk.HORIZONTAL)
-        self.bottom_paned_window.add(right_sub_pane, weight=2) # Peso 2 (dobro da montagem)
+        self.bottom_paned_window.add(right_sub_pane) # Peso 2 (dobro da montagem) REMOVIDO
         self.inner_bottom_paned_window = right_sub_pane # Salvar referência
 
         # Frame da Rolagem (dentro do sub-painel)
         rolagem_frame = ttk.LabelFrame(right_sub_pane, text="Rolagem")
-        right_sub_pane.add(rolagem_frame, weight=2) # Peso 2
+        right_sub_pane.add(rolagem_frame) # Peso 2 REMOVIDO
 
         rolagem_frame.rowconfigure(1, weight=1)
         rolagem_frame.columnconfigure(0, weight=1)
@@ -547,7 +604,7 @@ class OptionStrategyApp:
 
         # Frame da Posição (dentro do sub-painel)
         self.position_frame = ttk.LabelFrame(right_sub_pane, text=f"Posição Atual ({self.current_position_key})")
-        right_sub_pane.add(self.position_frame, weight=1) # Peso 1
+        right_sub_pane.add(self.position_frame) # Peso 1 REMOVIDO
 
         # self.position_frame.rowconfigure(0, weight=1) # Old configuration
         self.position_frame.columnconfigure(0, weight=1) # Keep column config
@@ -1850,6 +1907,27 @@ class OptionStrategyApp:
             tree.insert("", "end", values=values, tags=(tag,))
 
         return frame
+
+    def _force_taskbar_icon(self):
+        """Força a aparição do ícone na barra de tarefas"""
+        try:
+            # Força foco e atualização
+            if hasattr(self, 'root') and self.root.winfo_exists(): # Garante que a janela ainda existe
+                self.root.lift()
+                self.root.focus_force()
+                self.root.update()
+            
+            # Tenta reconfigurar o ícone
+            if hasattr(self, 'root') and self.root.winfo_exists():
+                try:
+                    self.root.iconbitmap('icon.ico')
+                except tk.TclError: # Captura TclError especificamente para iconbitmap
+                    pass
+        except Exception as e:
+            # Evita erros se self.root não existir mais (ex: durante o fechamento)
+            if hasattr(self, 'root') and self.root.winfo_exists():
+                 print(f"Erro ao forçar ícone: {e}")
+            # else: ignore, a janela provavelmente está sendo destruída
 
 class SyncProgressPopup:
     def __init__(self, master):
